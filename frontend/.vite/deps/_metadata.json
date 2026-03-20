@@ -1,0 +1,25 @@
+{
+  "hash": "5c2ee253",
+  "configHash": "969b321e",
+  "lockfileHash": "531f3b77",
+  "browserHash": "1c2b7494",
+  "optimized": {
+    "lit": {
+      "src": "../../node_modules/lit/index.js",
+      "file": "lit.js",
+      "fileHash": "4db588c0",
+      "needsInterop": false
+    },
+    "lit/decorators.js": {
+      "src": "../../node_modules/lit/decorators.js",
+      "file": "lit_decorators__js.js",
+      "fileHash": "93ce2b5e",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-ANNRGWMH": {
+      "file": "chunk-ANNRGWMH.js"
+    }
+  }
+}
