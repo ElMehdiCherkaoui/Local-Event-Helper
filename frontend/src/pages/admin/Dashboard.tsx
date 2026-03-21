@@ -1,4 +1,13 @@
 import AdminLayout from "../../layouts/AdminLayout";
+import AdminIconUsers from '../../assets/icons/AdminIconUsers.svg';
+import AdminIconEvents from '../../assets/icons/AdminIconEvents.svg';
+import ProvidersIcon from '../../assets/icons/ProvidersIcon.svg';
+import RevenueIcon from '../../assets/icons/Revenue.svg';
+import ManagmentIcon from '../../assets/icons/ManagmentIcon.svg';
+import OrganizateurIcon from '../../assets/icons/OrganizateurIcon.svg';
+import ProviderIcon2 from '../../assets/icons/ProviderIcon2.svg';
+import ModerationIcon from '../../assets/icons/ModerationIcon2.svg';
+
 
 export default function DashboardAdmin() {
 	return (
@@ -11,7 +20,7 @@ export default function DashboardAdmin() {
 						<div className="rounded-lg border border-white/5 bg-[#1E293B] p-5">
 							<div className="mb-3 flex items-center justify-between">
 								<p className="text-xs text-gray-400">Total Users</p>
-								<span className="rounded-md bg-cyan-500 p-2 text-white">👤</span>
+								<img src={AdminIconUsers} alt="Users" className="rounded-md bg-cyan-500 text-white px-2 py-4" />
 							</div>
 							<h4 className="text-2xl font-bold text-white">1,247</h4>
 						</div>
@@ -19,7 +28,8 @@ export default function DashboardAdmin() {
 						<div className="rounded-lg border border-white/5 bg-[#1E293B] p-5">
 							<div className="mb-3 flex items-center justify-between">
 								<p className="text-xs text-gray-400">Total Events</p>
-								<span className="rounded-md bg-purple-500 p-2 text-white">📅</span>
+
+								<img src={AdminIconEvents} className="rounded-md bg-purple-500 p-2 text-white px-2 py-4" />
 							</div>
 							<h4 className="text-2xl font-bold text-white">3,456</h4>
 						</div>
@@ -27,7 +37,9 @@ export default function DashboardAdmin() {
 						<div className="rounded-lg border border-white/5 bg-[#1E293B] p-5">
 							<div className="mb-3 flex items-center justify-between">
 								<p className="text-xs text-gray-400">Total Providers</p>
-								<span className="rounded-md bg-orange-500 p-2 text-white">📋</span>
+			
+								<img src={ProvidersIcon} className="rounded-md bg-orange-500 p-2 text-white px-2 py-4" />
+
 							</div>
 							<h4 className="text-2xl font-bold text-white">428</h4>
 						</div>
@@ -35,7 +47,9 @@ export default function DashboardAdmin() {
 						<div className="rounded-lg border border-white/5 bg-[#1E293B] p-5">
 							<div className="mb-3 flex items-center justify-between">
 								<p className="text-xs text-gray-400">Revenue</p>
-								<span className="rounded-md bg-green-500 p-2 text-white">💲</span>
+					
+								<img src={RevenueIcon} className="rounded-md bg-green-500 p-2 text-white px-2 py-4" />
+
 							</div>
 							<h4 className="text-2xl font-bold text-white">$45.2K</h4>
 						</div>
@@ -52,7 +66,7 @@ export default function DashboardAdmin() {
 									<p className="mb-4 text-xs text-gray-400">Organizers</p>
 									<h4 className="text-2xl font-bold text-white">819</h4>
 								</div>
-								<span className="text-cyan-400">👤</span>
+								<img src={OrganizateurIcon} alt="" />
 							</div>
 
 							<div className="mt-6 space-y-2 text-sm">
@@ -73,7 +87,8 @@ export default function DashboardAdmin() {
 									<p className="mb-4 text-xs text-gray-400">Providers</p>
 									<h4 className="text-2xl font-bold text-white">428</h4>
 								</div>
-								<span className="text-purple-400">👜</span>
+							
+									<img src={ProviderIcon2} alt="" />
 							</div>
 
 							<div className="mt-6 space-y-2 text-sm">
@@ -123,19 +138,22 @@ export default function DashboardAdmin() {
 
 					<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
 						<div className="rounded-lg bg-blue-600 p-5 text-white">
-							<div className="mb-4 text-xl">👥</div>
+							
+							<img src={AdminIconUsers} alt="" className="mb-4 w-12"/>
 							<h4 className="font-semibold">Manage Users</h4>
 							<p className="mt-1 text-sm text-blue-100">Add, edit, or remove users</p>
 						</div>
 
 						<div className="rounded-lg bg-orange-600 p-5 text-white">
-							<div className="mb-4 text-xl">⚖️</div>
+			
+							<img src={ModerationIcon} alt="" className="mb-4 w-12"/>
 							<h4 className="font-semibold">Moderation Queue</h4>
 							<p className="mt-1 text-sm text-orange-100">Review pending items (18)</p>
 						</div>
 
 						<div className="rounded-lg bg-green-600 p-5 text-white lg:col-span-1">
-							<div className="mb-4 text-xl">📄</div>
+					
+								<img src={ManagmentIcon} alt="" className="mb-4 w-8"/>
 							<h4 className="font-semibold">View Reports</h4>
 							<p className="mt-1 text-sm text-green-100">Detailed analytics & reports</p>
 						</div>
