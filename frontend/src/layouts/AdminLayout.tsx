@@ -1,6 +1,11 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
+import AdminIconDashboard from '../assets/icons/AdminIconDashboard.svg';
+import AdminIconUsers from '../assets/icons/AdminIconUsers.svg';
+import AdminIconEvents from '../assets/icons/AdminIconEvents.svg';
+import AdminIconLogs from '../assets/icons/AdminIconLogs.svg';
+import AdminIconModiration from '../assets/icons/AdminIconModiration.svg';
 
 type AdminLayoutProps = {
 	children: ReactNode;
@@ -42,7 +47,7 @@ export default function AdminLayout({
 									: "text-gray-300 hover:bg-white/5"
 									}`}
 							>
-								<span>📁</span>
+								<img src={AdminIconDashboard} alt="Dashboard" className="h-5 w-5" />
 								<span>Dashboard</span>
 							</Link>
 
@@ -54,7 +59,7 @@ export default function AdminLayout({
 									: "text-gray-300 hover:bg-white/5"
 									}`}
 							>
-								<span>👥</span>
+								<img src={AdminIconUsers} alt="Users" className="h-5 w-5" />
 								<span>Users</span>
 							</Link>
 
@@ -66,7 +71,7 @@ export default function AdminLayout({
 									: "text-gray-300 hover:bg-white/5"
 									}`}
 							>
-								<span>📅</span>
+								<img src={AdminIconEvents} alt="Events" className="h-5 w-5" />
 								<span>Events</span>
 							</Link>
 
@@ -78,7 +83,7 @@ export default function AdminLayout({
 									: "text-gray-300 hover:bg-white/5"
 									}`}
 							>
-								<span>🛡️</span>
+								<img src={AdminIconModiration} alt="Moderation" className="h-5 w-5" />
 								<span>Moderation</span>
 							</Link>
 
@@ -90,7 +95,7 @@ export default function AdminLayout({
 									: "text-gray-300 hover:bg-white/5"
 									}`}
 							>
-								<span>📊</span>
+								<img src={AdminIconLogs} alt="Logs" className="h-5 w-5" />
 								<span>Logs</span>
 							</Link>
 							<div className="p-4">
