@@ -38,7 +38,7 @@ export default function Dashboard() {
 			subtitle="Here’s what’s happening with your events"
 		>
 			<div className="space-y-6">
-				{/* Stats */}
+	
 				<section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 					{stats.map((card) => (
 						<div
@@ -61,7 +61,7 @@ export default function Dashboard() {
 					))}
 				</section>
 
-				{/* Upcoming event */}
+		
 				<section className="grid grid-cols-1 gap-6 xl:grid-cols-4">
 					<div className="xl:col-span-2">
 						<h3 className="mb-4 text-xl font-semibold text-slate-900 sm:text-2xl">
