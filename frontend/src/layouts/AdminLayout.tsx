@@ -34,15 +34,15 @@ export default function AdminLayout({
 						}`}
 				>
 					<div className="flex h-full flex-col">
-						<div className="flex items-center justify-between border-white/10 px-6 py-5">
-							<h1 className="text-lg font-bold">LEH Admin</h1>
+						<div className=" border-white/10 px-6 py-5">
+							<h1 className="text-xl text-center font-bold">LEH Admin</h1>
 						</div>
 
 						<nav className="flex-1 space-y-2 px-4 py-5 text-sm">
 							<Link
 								to="/admin/dashboard"
 								onClick={closeSidebar}
-								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold text-[1.2em] transition-colors ${isActive("/admin/dashboard")
+								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold transition-colors ${isActive("/admin/dashboard")
 									? "bg-blue-500 text-white"
 									: "text-gray-300 hover:bg-white/5"
 									}`}
@@ -54,7 +54,7 @@ export default function AdminLayout({
 							<Link
 								to="/admin/users"
 								onClick={closeSidebar}
-								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold text-[1.2em] transition-colors ${isActive("/admin/users")
+								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold transition-colors ${isActive("/admin/users")
 									? "bg-blue-500 text-white"
 									: "text-gray-300 hover:bg-white/5"
 									}`}
@@ -66,7 +66,7 @@ export default function AdminLayout({
 							<Link
 								to="/admin/events"
 								onClick={closeSidebar}
-								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold text-[1.2em] transition-colors ${isActive("/admin/events")
+								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold  transition-colors ${isActive("/admin/events")
 									? "bg-blue-500 text-white"
 									: "text-gray-300 hover:bg-white/5"
 									}`}
@@ -78,7 +78,7 @@ export default function AdminLayout({
 							<Link
 								to="/admin/moderation"
 								onClick={closeSidebar}
-								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold text-[1.2em] transition-colors ${isActive("/admin/moderation")
+								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold  transition-colors ${isActive("/admin/moderation")
 									? "bg-blue-500 text-white"
 									: "text-gray-300 hover:bg-white/5"
 									}`}
@@ -90,7 +90,7 @@ export default function AdminLayout({
 							<Link
 								to="/admin/logs"
 								onClick={closeSidebar}
-								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold text-[1.2em] transition-colors ${isActive("/admin/logs")
+								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold  transition-colors ${isActive("/admin/logs")
 									? "bg-blue-500 text-white"
 									: "text-gray-300 hover:bg-white/5"
 									}`}
@@ -130,8 +130,8 @@ export default function AdminLayout({
 								☰
 							</button>
 							<div>
-								<h2 className="text-2xl font-semibold text-white">{title}</h2>
-								<p className="text-md text-gray-400">{subtitle}</p>
+								<h2 className="text-xl font-semibold text-white">{title}</h2>
+								<p className="text-[1em] text-gray-400">{subtitle}</p>
 							</div>
 						</div>
 
