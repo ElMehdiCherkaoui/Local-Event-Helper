@@ -1,31 +1,36 @@
 import OrganizerLayout from "../../layouts/OrganizerLayout";
 
+import PersonIcon from '../../assets/icons/PersonIcon.svg';
+import MoneyIcon from '../../assets/icons/MoneyIcon.svg';
+import ClockIcon from '../../assets/icons/ClockIcon.svg';
+import BagIcon from '../../assets/icons/BagIcon.svg';
+
 const stats = [
 	{
 		title: "ACTIVE EVENTS",
 		value: "3",
-		icon: "◻",
+		icon: BagIcon,
 		iconBg: "bg-blue-100",
 		iconColor: "text-blue-600",
 	},
 	{
 		title: "PENDING TASKS",
 		value: "7",
-		icon: "◉",
+		icon: ClockIcon,
 		iconBg: "bg-orange-100",
 		iconColor: "text-orange-600",
 	},
 	{
 		title: "TOTAL BUDGET",
 		value: "$8.5k",
-		icon: "$",
+		icon: MoneyIcon,
 		iconBg: "bg-green-100",
 		iconColor: "text-green-600",
 	},
 	{
 		title: "BOOKED PROVIDERS",
 		value: "5",
-		icon: "⌘",
+		icon: PersonIcon,
 		iconBg: "bg-purple-100",
 		iconColor: "text-purple-600",
 	},
@@ -45,12 +50,9 @@ export default function Dashboard() {
 							key={card.title}
 							className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md"
 						>
-							<div
-								className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${card.iconBg} ${card.iconColor}`}
-							>
-								{card.icon}
-							</div>
-
+							<div className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl ${card.iconBg} ${card.iconColor}`}>
+							<img src={card.icon} alt="" className="h-6 w-6"/>
+</div>
 							<p className="text-xs font-semibold tracking-[0.18em] text-slate-500">
 								{card.title}
 							</p>
