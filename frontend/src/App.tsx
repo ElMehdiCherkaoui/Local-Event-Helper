@@ -10,6 +10,12 @@ import ModerationAdmin from './pages/admin/Moderation';
 import LogsAdmin from './pages/admin/AuditLogs';
 
 import OrganizerDashboard from './pages/organizer/Dashboard';
+import OrganizerEvents from './pages/organizer/Events';
+import OrganizerEventDetails from './pages/organizer/EventDetails';
+import OrganizerProvidersSearch from './pages/organizer/ProvidersSearch';
+import OrganizerProvidersDetails from './pages/organizer/ProvidersDetails';
+import OrganizerMessages from './pages/organizer/Messages';
+import OrganizerProfile from './pages/organizer/Profile';
 
 export default function App() {
 	return (
@@ -24,6 +30,12 @@ export default function App() {
 				<Route path='/admin/moderation' element={<ModerationAdmin />} />
 				<Route path='/admin/logs' element={<LogsAdmin />} />
 				<Route path='/organizer/dashboard' element={<OrganizerDashboard />} />
+				<Route path='/organizer/events' element={<OrganizerEvents />} />
+				<Route path='/organizer/events/:eventId' element={<OrganizerEventDetails />} />
+				<Route path='/organizer/providers' element={<OrganizerProvidersSearch />} />
+				<Route path='/organizer/providers/:providerId' element={<OrganizerProvidersDetails />} />
+				<Route path='/organizer/messages' element={<OrganizerMessages />} />
+				<Route path='/organizer/profile' element={<OrganizerProfile />} />
 			</Routes>
 		</BrowserRouter>
 	)
