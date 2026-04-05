@@ -3,7 +3,8 @@ import AdminEventIcon from '../../assets/icons/AdminIconEvents.svg';
 import BannedIcon from '../../assets/icons/BannedIcon.svg';
 import FlagIcon from '../../assets/icons/FlagIcon.svg';
 import ReportIcon from '../../assets/icons/ReportIcon.svg';
-
+import AdminIconUsers from '../../assets/icons/AdminIconUsers.svg';
+import Symbol from '../../assets/icons/Symbol.svg';
 const stats = [
 		{
 			label: "Pending Events",
@@ -41,7 +42,7 @@ const stats = [
 			date: "July 20, 2026",
 			submittedAgo: "2 hours ago",
 			guests: 120,
-			budget: "$6,000",
+			budget: "6,000",
 			status: "Pending",
 		},
 		{
@@ -53,7 +54,7 @@ const stats = [
 			date: "March 15, 2026",
 			submittedAgo: "5 hours ago",
 			guests: 300,
-			budget: "$12,000",
+			budget: "12,000",
 			status: "Pending",
 		},
 	] ;
@@ -119,7 +120,7 @@ export default function Moderation() {
 
 									<div>
 										<p className="mb-1 text-xs text-gray-500">Location & Date</p>
-										<p className="font-medium text-white">📍 {event.location}</p>
+										<p className="font-medium text-white flex items-center gap-2"><img src={Symbol} alt="" /> {event.location}</p>
 										<p className="text-gray-400">{event.date}</p>
 									</div>
 								</div>
@@ -132,8 +133,8 @@ export default function Moderation() {
 
 									<div>
 										<p className="mb-1 text-xs text-gray-500">Guests & Budget</p>
-										<p className="font-medium text-white">👥 {event.guests} guests</p>
-										<p className="text-gray-400">💲 {event.budget}</p>
+										<p className="font-medium text-white flex items-center gap-2"><img src={AdminIconUsers} alt="" /> {event.guests} guests</p>
+										<p className="text-gray-400 flex items-center gap-1" > <div className="font-bold text-white">$</div> {event.budget}</p>
 									</div>
 								</div>
 							</div>
