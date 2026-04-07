@@ -4,18 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 
 class AuthController extends Controller
 {
-    public function register(Request $request): JsonResponse
+    public function register(Request $request)
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role_id' => ['nullable', 'integer', 'exists:roles,id'],
             'business_name' => ['nullable', 'string', 'max:255'],
@@ -32,15 +31,15 @@ class AuthController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role_id' => $validated['role_id'] ?? null,
-            'business_name' => $validated['business_name'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-            'date_of_birth' => $validated['date_of_birth'] ?? null,
-            'bio' => $validated['bio'] ?? null,
-            'street_address' => $validated['street_address'] ?? null,
-            'city' => $validated['city'] ?? null,
-            'country' => $validated['country'] ?? null,
-            'zip_code' => $validated['zip_code'] ?? null,
+            'role_id' => $validated['role_id'],
+            'business_name' => $validated['business_name'],
+            'phone' => $validated['phone'],
+            'date_of_birth' => $validated['date_of_birth'],
+            'bio' => $validated['bio'],
+            'street_address' => $validated['street_address'],
+            'city' => $validated['city'],
+            'country' => $validated['country'],
+            'zip_code' => $validated['zip_code'],
         ]);
 
         $user->loadMissing('role');
@@ -54,7 +53,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function login(Request $request): JsonResponse
+    public function login(Request $request)
     {
         $validated = $request->validate([
             'email' => ['required', 'string', 'email'],
@@ -80,7 +79,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function me(Request $request): JsonResponse
+    public function me(Request $request)
     {
         $user = $request->user();
 
@@ -93,7 +92,7 @@ class AuthController extends Controller
         ]);
     }
 
-    public function logout(Request $request): JsonResponse
+    public function logout(Request $request)
     {
         $user = $request->user();
 
