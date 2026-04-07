@@ -193,7 +193,7 @@ export default function ProviderMessages() {
 						</div>
 					</div>
 
-					<div className='min-h-[420px] space-y-4 px-3 py-4 sm:min-h-[560px] sm:px-4'>
+					<div className='min-h-[35em] space-y-4 px-3 py-4 sm:min-h-[40em] sm:px-4'>
 						{selectedChat.messages.map((message) => (
 							<div key={message.id} className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'}`}>
 								<div>
@@ -204,7 +204,7 @@ export default function ProviderMessages() {
 											{message.fromMe ? 'SC' : selectedChat.avatarLetter}
 										</div>
 										<p
-											className={`max-w-[230px] rounded-xl px-3 py-2 text-xs sm:max-w-[340px] sm:text-sm ${
+											className={`max-w-[20em] rounded-xl px-3 py-2 text-xs sm:max-w-[45em] sm:text-sm ${
 												message.fromMe ? 'bg-violet-500 text-white' : 'bg-slate-100 text-slate-700'
 											}`}
 										>
