@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,15 +17,33 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'role_id' => ['nullable', 'integer', 'exists:roles,id'],
+            'business_name' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:25'],
+            'date_of_birth' => ['nullable', 'date'],
+            'bio' => ['nullable', 'string'],
+            'street_address' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'country' => ['nullable', 'string', 'max:255'],
+            'zip_code' => ['nullable', 'string', 'max:20'],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'role_id' => $validated['role_id'] ?? null,
+            'business_name' => $validated['business_name'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'date_of_birth' => $validated['date_of_birth'] ?? null,
+            'bio' => $validated['bio'] ?? null,
+            'street_address' => $validated['street_address'] ?? null,
+            'city' => $validated['city'] ?? null,
+            'country' => $validated['country'] ?? null,
+            'zip_code' => $validated['zip_code'] ?? null,
         ]);
 
-        event(new Registered($user));
+        $user->loadMissing('role');
 
         $token = $user->createToken('api')->plainTextToken;
 
@@ -52,6 +69,8 @@ class AuthController extends Controller
             ], 422);
         }
 
+        $user->loadMissing('role');
+
         $token = $user->createToken('api')->plainTextToken;
 
         return response()->json([
@@ -66,6 +85,8 @@ class AuthController extends Controller
         $user = $request->user();
 
         abort_if($user === null, 401);
+
+        $user->loadMissing('role');
 
         return response()->json([
             'user' => $user,
