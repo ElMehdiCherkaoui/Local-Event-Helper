@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Booking;
 use App\Models\Conversation;
 use Illuminate\Http\Request;
+use Spatie\Activitylog\Models\Activity;
 
 class AdminController extends Controller
 {
@@ -53,6 +54,45 @@ class AdminController extends Controller
         ]);
     }
 
+    public function events(Request $request)
+    {
+        if (!$this->isAdmin($request)) {
+            return response()->json([
+                'message' => 'Forbidden.',
+            ], 403);
+        }
+
+        $events = Event::query()
+            ->with('organizer')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return response()->json([
+            'events' => $events,
+            'count' => $events->count(),
+        ]);
+    }
+
+    public function logs(Request $request)
+    {
+        if (!$this->isAdmin($request)) {
+            return response()->json([
+                'message' => 'Forbidden.',
+            ], 403);
+        }
+
+        $logs = Activity::query()
+            ->with(['causer', 'subject'])
+            ->orderBy('id', 'desc')
+            ->limit(50)
+            ->get();
+
+        return response()->json([
+            'logs' => $logs,
+            'count' => $logs->count(),
+        ]);
+    }
+
     public function banUser(Request $request, User $user)
     {
         if (!$this->isAdmin($request)) {
@@ -64,6 +104,15 @@ class AdminController extends Controller
         $user->update([
             'is_banned' => true,
         ]);
+
+        activity()
+            ->causedBy($request->user())
+            ->performedOn($user)
+            ->withProperties([
+                'user_email' => $user->email,
+                'action' => 'ban',
+            ])
+            ->log('User banned');
 
         return response()->json([
             'message' => 'User banned successfully.',
@@ -82,6 +131,15 @@ class AdminController extends Controller
         $user->update([
             'is_banned' => false,
         ]);
+
+        activity()
+            ->causedBy($request->user())
+            ->performedOn($user)
+            ->withProperties([
+                'user_email' => $user->email,
+                'action' => 'unban',
+            ])
+            ->log('User unbanned');
 
         return response()->json([
             'message' => 'User unbanned successfully.',
@@ -117,6 +175,14 @@ class AdminController extends Controller
         }
 
         $review->delete();
+
+        activity()
+            ->causedBy($request->user())
+            ->performedOn($review)
+            ->withProperties([
+                'action' => 'delete_review',
+            ])
+            ->log('Review deleted');
 
         return response()->json([
             'message' => 'Review deleted successfully.',
