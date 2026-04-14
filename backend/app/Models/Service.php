@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Service extends Model
 {
@@ -30,17 +28,17 @@ class Service extends Model
         'price_max' => 'decimal:2',
     ];
 
-    public function provider(): BelongsTo
+    public function provider()
     {
         return $this->belongsTo(User::class, 'provider_id');
     }
 
-    public function reviews(): HasMany
+    public function reviews()
     {
         return $this->hasMany(Review::class);
     }
 
-    public function bookings(): HasMany
+    public function bookings()
     {
         return $this->hasMany(Booking::class);
     }

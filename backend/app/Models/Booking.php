@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Booking extends Model
 {
@@ -33,27 +31,27 @@ class Booking extends Model
         'responded_at' => 'datetime',
     ];
 
-    public function event(): BelongsTo
+    public function event()
     {
         return $this->belongsTo(Event::class);
     }
 
-    public function service(): BelongsTo
+    public function service()
     {
         return $this->belongsTo(Service::class);
     }
 
-    public function provider(): BelongsTo
+    public function provider()
     {
         return $this->belongsTo(User::class, 'provider_id');
     }
 
-    public function organizer(): BelongsTo
+    public function organizer()
     {
         return $this->belongsTo(User::class, 'organizer_id');
     }
 
-    public function review(): HasOne
+    public function review()
     {
         return $this->hasOne(Review::class);
     }

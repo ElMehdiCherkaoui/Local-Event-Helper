@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Availability extends Model
 {
@@ -20,7 +19,7 @@ class Availability extends Model
         'date' => 'date',
     ];
 
-    public function provider(): BelongsTo
+    public function provider()
     {
         return $this->belongsTo(User::class, 'provider_id');
     }

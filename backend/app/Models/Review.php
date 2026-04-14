@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Review extends Model
 {
@@ -28,17 +27,17 @@ class Review extends Model
         'value_rating' => 'decimal:1',
     ];
 
-    public function service(): BelongsTo
+    public function service()
     {
         return $this->belongsTo(Service::class);
     }
 
-    public function organizer(): BelongsTo
+    public function organizer()
     {
         return $this->belongsTo(User::class, 'organizer_id');
     }
 
-    public function booking(): BelongsTo
+    public function booking()
     {
         return $this->belongsTo(Booking::class);
     }

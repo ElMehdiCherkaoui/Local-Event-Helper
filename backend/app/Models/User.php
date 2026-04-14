@@ -4,8 +4,6 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -61,52 +59,52 @@ class User extends Authenticatable
         ];
     }
 
-    public function role(): BelongsTo
+    public function role()
     {
         return $this->belongsTo(Role::class);
     }
 
-    public function organizedEvents(): HasMany
+    public function organizedEvents()
     {
         return $this->hasMany(Event::class, 'organizer_id');
     }
 
-    public function providedServices(): HasMany
+    public function providedServices()
     {
         return $this->hasMany(Service::class, 'provider_id');
     }
 
-    public function bookingsAsOrganizer(): HasMany
+    public function bookingsAsOrganizer()
     {
         return $this->hasMany(Booking::class, 'organizer_id');
     }
 
-    public function bookingsAsProvider(): HasMany
+    public function bookingsAsProvider()
     {
         return $this->hasMany(Booking::class, 'provider_id');
     }
 
-    public function availabilities(): HasMany
+    public function availabilities()
     {
         return $this->hasMany(Availability::class, 'provider_id');
     }
 
-    public function conversationsAsOrganizer(): HasMany
+    public function conversationsAsOrganizer()
     {
         return $this->hasMany(Conversation::class, 'organizer_id');
     }
 
-    public function conversationsAsProvider(): HasMany
+    public function conversationsAsProvider()
     {
         return $this->hasMany(Conversation::class, 'provider_id');
     }
 
-    public function reviewsAsOrganizer(): HasMany
+    public function reviewsAsOrganizer()
     {
         return $this->hasMany(Review::class, 'organizer_id');
     }
 
-    public function sentMessages(): HasMany
+    public function sentMessages()
     {
         return $this->hasMany(Message::class, 'sender_id');
     }

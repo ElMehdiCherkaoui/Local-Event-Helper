@@ -4,9 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Event extends Model
 {
@@ -26,22 +23,22 @@ class Event extends Model
         'event_date' => 'date',
     ];
 
-    public function organizer(): BelongsTo
+    public function organizer()
     {
         return $this->belongsTo(User::class, 'organizer_id');
     }
 
-    public function budget(): HasOne
+    public function budget()
     {
         return $this->hasOne(Budget::class);
     }
 
-    public function tasks(): HasMany
+    public function tasks()
     {
         return $this->hasMany(Task::class);
     }
 
-    public function bookings(): HasMany
+    public function bookings()
     {
         return $this->hasMany(Booking::class);
     }
