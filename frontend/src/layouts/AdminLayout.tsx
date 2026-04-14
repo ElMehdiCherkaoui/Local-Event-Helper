@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import AdminIconDashboard from '../assets/icons/AdminIconDashboard.svg';
 import AdminIconUsers from '../assets/icons/AdminIconUsers.svg';
 import AdminIconEvents from '../assets/icons/AdminIconEvents.svg';
@@ -9,8 +9,8 @@ import AdminIconModiration from '../assets/icons/AdminIconModiration.svg';
 
 type AdminLayoutProps = {
 	children: ReactNode;
-	title?: string;
-	subtitle?: string;
+	title: string;
+	subtitle: string;
 };
 
 export default function AdminLayout({
@@ -20,11 +20,33 @@ export default function AdminLayout({
 }: AdminLayoutProps) {
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const location = useLocation();
+	const navigate = useNavigate();
 
 	const closeSidebar = () => setIsSidebarOpen(false);
 	const openSidebar = () => setIsSidebarOpen(true);
 
 	const isActive = (path: string) => location.pathname === path;
+
+	const handleLogout = async () => {
+		const token = localStorage.getItem('token');
+
+		if (token) {
+			try {
+				await fetch('http://127.0.0.1:8000/api/logout', {
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				});
+			} catch {
+			
+			}
+		}
+
+		localStorage.removeItem('token');
+		localStorage.removeItem('user');
+		navigate('/login');
+	};
 
 	return (
 		<div className="bg-[#2f2f2f] font-sans min-h-screen w-full">
@@ -101,6 +123,7 @@ export default function AdminLayout({
 							<div className="p-4">
 								<button
 									type="button"
+									onClick={handleLogout}
 									className="w-full rounded-md bg-red-500 px-4 py-3 text-sm font-medium text-white hover:bg-red-600"
 								>
 									Logout
