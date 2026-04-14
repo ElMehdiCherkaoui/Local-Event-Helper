@@ -92,6 +92,32 @@ class AuthController extends Controller
         ]);
     }
 
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'email' => ['sometimes', 'required', 'string', 'lowercase', 'email', 'max:255'],
+            'password' => ['sometimes', 'nullable', 'confirmed', Rules\Password::defaults()],
+            'business_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'phone' => ['sometimes', 'nullable', 'string', 'max:25'],
+            'date_of_birth' => ['sometimes', 'nullable', 'date'],
+            'bio' => ['sometimes', 'nullable', 'string'],
+            'street_address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'city' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'country' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'zip_code' => ['sometimes', 'nullable', 'string', 'max:20'],
+        ]);
+
+        $user->update($validated);
+        $user->loadMissing('role');
+        return response()->json([
+            'message' => 'Profile updated successfully.',
+            'user' => $user,
+        ]);
+    }
+
     public function logout(Request $request)
     {
         $user = $request->user();
