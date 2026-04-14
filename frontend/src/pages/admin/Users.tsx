@@ -1,91 +1,141 @@
-import { useState } from "react";
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 import AdminLayout from "../../layouts/AdminLayout";
 
-const sampleUsers = [
-	{
-		id: 1,
-		name: "ELMehdi Cherkaoui",
-		email: "john@example.com",
-		type: "Organizer",
-		location: "Marrakech",
-		joined: "Jan 15, 2024",
-		status: "Active",
-		avatar: "J",
-		color: "bg-blue-500",
-	},
-	{
-		id: 2,
-		name: "Sarah Catering",
-		email: "sarah@catering.com",
-		type: "Provider",
-		location: "Marrakech",
-		joined: "Dec 3, 2023",
-		status: "Active",
-		avatar: "S",
-		color: "bg-purple-500",
-	},
-	{
-		id: 3,
-		name: "Alice Smith",
-		email: "alice@example.com",
-		type: "Organizer",
-		location: "Casablanca",
-		joined: "Feb 20, 2024",
-		status: "Active",
-		avatar: "A",
-		color: "bg-green-500",
-	},
-	{
-		id: 4,
-		name: "SpamBot123",
-		email: "spam@fake.com",
-		type: "Provider",
-		location: "Safi",
-		joined: "Jan 5, 2024",
-		status: "Banned",
-		avatar: "S",
-		color: "bg-red-500",
-	},
-	{
-		id: 5,
-		name: "John Photo",
-		email: "john@photography.com",
-		type: "Provider",
-		location: "Rabat",
-		joined: "Nov 12, 2023",
-		status: "Active",
-		avatar: "J",
-		color: "bg-orange-500",
-	},
-	{
-		id: 6,
-		name: "Hamza TL",
-		email: "hamzaPro123@gmail.com",
-		type: "Admin",
-		location: "Safi",
-		joined: "Nov 13, 2023",
-		status: "Active",
-		avatar: "H",
-		color: "bg-blue-500",
-	},
-];
+type AdminUser = {
+	id: number;
+	name: string;
+	email: string;
+	is_banned: boolean;
+	role?: {
+		name?: string;
+	};
+	city?: string | null;
+	created_at?: string;
+};
+
+const roleLabel = (roleName?: string) => {
+	if (roleName === 'provider') {
+		return 'Provider';
+	}
+
+	if (roleName === 'admin') {
+		return 'Admin';
+	}
+
+	return 'Organizer';
+};
+
+const colorForRole = (roleName?: string) => {
+	if (roleName === 'provider') {
+		return 'bg-purple-500';
+	}
+
+	if (roleName === 'admin') {
+		return 'bg-blue-500';
+	}
+
+	return 'bg-green-500';
+};
+
+const avatarForName = (name: string) => name.charAt(0).toUpperCase();
+
+const formatDate = (value?: string) => {
+	if (!value) {
+		return '-';
+	}
+
+	return new Date(value).toLocaleDateString();
+};
 
 export default function Users() {
+	const [users, setUsers] = useState<AdminUser[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [userId, setuserId] = useState<number | null>(null);
+	const [error, setError] = useState('');
 	const [userType, setUserType] = useState("All");
 	const [status, setStatus] = useState("All");
 	const [location, setLocation] = useState("All");
 	const [search, setSearch] = useState("");
 
-	const filteredUsers = sampleUsers.filter((user) => {
-		if (userType !== "All" && user.type !== userType) {
+	useEffect(() => {
+		const fetchUsers = async () => {
+			const token = localStorage.getItem('token');
+
+			if (!token) {
+				setError('No token found. Please login again.');
+				setLoading(false);
+				return;
+			}
+
+			try {
+				const response = await axios.get('http://127.0.0.1:8000/api/admin/users', {
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				});
+
+				setUsers(response.data?.users || []);
+			} catch (err: any) {
+				setError(err?.response?.data?.message || 'Failed to load users.');
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchUsers();
+	}, []);
+
+	const handleBanToggle = async (user: AdminUser) => {
+		const token = localStorage.getItem('token');
+
+		if (!token) {
+			setError('No token found. Please login again.');
+			return;
+		}
+
+		setuserId(user.id);
+		setError('');
+
+		try {
+			const url = user.is_banned
+				? `http://127.0.0.1:8000/api/admin/users/${user.id}/unban`
+				: `http://127.0.0.1:8000/api/admin/users/${user.id}/ban`;
+
+			await axios.patch(url, {}, {
+				headers: { Authorization: `Bearer ${token}` },
+			});
+
+			const updatedUsers = users.map((currentUser) => {
+				if (currentUser.id === user.id) {
+					return { ...currentUser, is_banned: !currentUser.is_banned };
+				}
+
+				return currentUser;
+			});
+
+			setUsers(updatedUsers);
+		} catch (err: any) {
+			setError('Action failed.');
+		} finally {
+			setuserId(null);
+		}
+	};
+
+	const filteredUsers = users.filter((user) => {
+		const typeValue = roleLabel(user.role?.name);
+		const statusValue = user.is_banned ? 'Banned' : 'Active';
+		const locationValue = user.city;
+
+		if (userType !== "All" && typeValue !== userType) {
 			return false;
 		}
 
-		if (status !== "All" && user.status !== status) {
+		if (status !== "All" && statusValue !== status) {
 			return false;
 		}
 
-		if (location !== "All" && user.location !== location) {
+		if (location !== "All" && locationValue !== location) {
 			return false;
 		}
 
@@ -107,6 +157,9 @@ export default function Users() {
 			subtitle="Manage organizers and providers"
 		>
 			<main className="space-y-4 p-4 md:p-6">
+				{loading ? <p className="text-sm text-gray-300">Loading users...</p> : null}
+				{error ? <p className="text-sm text-red-400">{error}</p> : null}
+
 				<section className="space-y-4 rounded-xl border border-white/10 bg-[#0d1b34] p-3 md:p-4">
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
 						<div>
@@ -188,9 +241,9 @@ export default function Users() {
 						>
 							<div className="col-span-4 flex items-center gap-3">
 								<div
-									className={`flex h-8 w-8 items-center justify-center rounded-full ${user.color} text-xs font-bold`}
+									className={`flex h-8 w-8 items-center justify-center rounded-full ${colorForRole(user.role?.name)} text-xs font-bold`}
 								>
-									{user.avatar}
+									{avatarForName(user.name)}
 								</div>
 								<div>
 									<p className="font-medium">{user.name}</p>
@@ -200,40 +253,43 @@ export default function Users() {
 
 							<div className="col-span-1">
 								<span
-									className={`rounded px-2 py-1 text-[10px] ${user.type === "Organizer"
+									className={`rounded px-2 py-1 text-[10px] ${roleLabel(user.role?.name) === "Organizer"
 											? "bg-blue-500/20 text-blue-300"
-											: "bg-purple-500/20 text-purple-300"
+											: roleLabel(user.role?.name) === "Provider"
+											? "bg-purple-500/20 text-purple-300"
+											: "bg-gray-500/20 text-gray-300"
 										}`}
 								>
-									{user.type}
+									{roleLabel(user.role?.name)}
 								</span>
 							</div>
 
 							<div className="col-span-2 text-sm text-gray-300">
-								{user.location}
+								{user.city || '-'}
 							</div>
 
 							<div className="col-span-2 text-sm text-gray-300">
-								{user.joined}
+								{formatDate(user.created_at)}
 							</div>
 
 							<div className="col-span-1">
 								<span
-									className={`rounded px-2 py-1 text-[10px] ${user.status === "Active"
+									className={`rounded px-2 py-1 text-[10px] ${!user.is_banned
 											? "bg-green-500/20 text-green-300"
 											: "bg-red-500/20 text-red-300"
 										}`}
 								>
-									{user.status}
+									{user.is_banned ? 'Banned' : 'Active'}
 								</span>
 							</div>
 
 							<div className="col-span-2 flex justify-center gap-2">
-								<button className="rounded bg-green-500/20 px-2 py-1 text-xs text-green-300 hover:bg-green-500/30">
-									{user.status === "Banned" ? "Unban" : "Ban"}
-								</button>
-								<button className="rounded bg-red-500/20 px-2 py-1 text-xs text-red-300 hover:bg-red-500/30">
-									Delete
+								<button
+									onClick={() => handleBanToggle(user)}
+									disabled={userId === user.id}
+									className="rounded bg-green-500/20 px-2 py-1 text-xs text-green-300 hover:bg-green-500/30 disabled:opacity-50"
+								>
+									{userId === user.id ? '...' : user.is_banned ? 'Unban' : 'Ban'}
 								</button>
 							</div>
 						</div>
@@ -250,9 +306,9 @@ export default function Users() {
 							<div className="mb-3 flex items-start justify-between gap-3">
 								<div className="flex items-center gap-3">
 									<div
-										className={`flex h-9 w-9 items-center justify-center rounded-full ${user.color} text-xs font-bold text-white`}
+										className={`flex h-9 w-9 items-center justify-center rounded-full ${colorForRole(user.role?.name)} text-xs font-bold text-white`}
 									>
-										{user.avatar}
+										{avatarForName(user.name)}
 									</div>
 									<div>
 										<p className="font-medium text-white">{user.name}</p>
@@ -260,27 +316,27 @@ export default function Users() {
 									</div>
 								</div>
 								<span
-									className={`rounded px-2 py-1 text-[10px] ${user.status === "Active"
+									className={`rounded px-2 py-1 text-[10px] ${!user.is_banned
 											? "bg-green-500/20 text-green-300"
 											: "bg-red-500/20 text-red-300"
 										}`}
 								>
-									{user.status}
+									{user.is_banned ? 'Banned' : 'Active'}
 								</span>
 							</div>
 
 							<div className="grid grid-cols-2 gap-3 text-xs">
 								<div>
 									<p className="text-gray-400">Type</p>
-									<p className="text-white">{user.type}</p>
+									<p className="text-white">{roleLabel(user.role?.name)}</p>
 								</div>
 								<div>
 									<p className="text-gray-400">Joined</p>
-									<p className="text-white">{user.joined}</p>
+									<p className="text-white">{formatDate(user.created_at)}</p>
 								</div>
 								<div>
 									<p className="text-gray-400">Location</p>
-									<p className="text-white">{user.location}</p>
+									<p className="text-white">{user.city || '-'}</p>
 								</div>
 								<div>
 									<p className="text-gray-400">Email</p>
@@ -289,11 +345,12 @@ export default function Users() {
 							</div>
 
 							<div className="mt-4 flex gap-2">
-								<button className="flex-1 rounded bg-green-500/20 px-3 py-2 text-xs text-green-300 hover:bg-green-500/30">
-									{user.status === "Banned" ? "Unban" : "Ban"}
-								</button>
-								<button className="flex-1 rounded bg-red-500/20 px-3 py-2 text-xs text-red-300 hover:bg-red-500/30">
-									Delete
+								<button
+									onClick={() => handleBanToggle(user)}
+									disabled={userId === user.id}
+									className="flex-1 rounded bg-green-500/20 px-3 py-2 text-xs text-green-300 hover:bg-green-500/30 disabled:opacity-50"
+								>
+									{userId === user.id ? '...' : user.is_banned ? 'Unban' : 'Ban'}
 								</button>
 							</div>
 						</div>
