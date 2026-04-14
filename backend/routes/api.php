@@ -25,6 +25,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
     Route::get('admin/statistics', [AdminController::class, 'statistics']);
     Route::get('admin/users', [AdminController::class, 'users']);
+    Route::get('admin/events', [AdminController::class, 'events']);
+    Route::get('admin/logs', [AdminController::class, 'logs']);
     Route::patch('admin/users/{user}/ban', [AdminController::class, 'banUser']);
     Route::patch('admin/users/{user}/unban', [AdminController::class, 'unbanUser']);
     Route::get('admin/reviews', [AdminController::class, 'reviews']);
