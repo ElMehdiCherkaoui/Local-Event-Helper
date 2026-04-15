@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 type ProviderLayoutProps = {
 	children: ReactNode;
-	title?: string;
-	subtitle?: string;
+	title: string;
+	subtitle: string;
 };
 
 type NavItem = {
@@ -25,8 +25,31 @@ const navItems: NavItem[] = [
 
 export default function ProviderLayout({ children, title, subtitle }: ProviderLayoutProps) {
 	const location = useLocation();
+	const navigate = useNavigate();
 
 	const isActive = (path: string) => location.pathname === path;
+
+	const handleLogout = async () => {
+		const token = localStorage.getItem('token');
+
+		if (token) {
+			try {
+				await fetch('http://127.0.0.1:8000/api/logout', {
+					method: 'POST',
+					headers: {
+						Authorization: `Bearer ${token}`,
+						Accept: 'application/json',
+					},
+				});
+			} catch {
+			
+			}
+		}
+
+		localStorage.removeItem('token');
+		localStorage.removeItem('user');
+		navigate('/login');
+	};
 
 	return (
 		<div className='min-h-screen w-full bg-[#2f2f2f] font-sans'>
@@ -67,6 +90,7 @@ export default function ProviderLayout({ children, title, subtitle }: ProviderLa
 
 							<button
 								type='button'
+								onClick={handleLogout}
 								className='mt-4 w-full rounded-md border border-white/15 py-2 text-center text-xs font-medium text-white hover:bg-white/10'
 							>
 								Sign out
