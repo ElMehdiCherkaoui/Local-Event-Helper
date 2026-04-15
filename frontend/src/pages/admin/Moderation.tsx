@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 import AdminLayout from "../../layouts/AdminLayout";
 import AdminEventIcon from '../../assets/icons/AdminIconEvents.svg';
 import BannedIcon from '../../assets/icons/BannedIcon.svg';
@@ -5,61 +7,191 @@ import FlagIcon from '../../assets/icons/FlagIcon.svg';
 import ReportIcon from '../../assets/icons/ReportIcon.svg';
 import AdminIconUsers from '../../assets/icons/AdminIconUsers.svg';
 import Symbol from '../../assets/icons/Symbol.svg';
-const stats = [
+
+type StatItem = {
+	label: string;
+	value: number;
+	icon: string;
+	iconBg: string;
+};
+
+type ApiEvent = {
+	id: number;
+	title: string;
+	location?: string | null;
+	event_date?: string | null;
+	created_at?: string;
+	guests_count?: number | null;
+	status?: string | null;
+	organizer?: {
+		name?: string;
+		email?: string;
+	};
+};
+
+type ModerationEvent = {
+	eventId: number;
+	id: string;
+	title: string;
+	organizer: string;
+	email: string;
+	location: string;
+	date: string;
+	submittedAgo: string;
+	guests: number;
+	budget: string;
+	status: string;
+};
+
+const defaultStats: StatItem[] = [
 		{
 			label: "Pending Events",
-			value: 18,
+			value: 0,
 			icon: AdminEventIcon,
 			iconBg: "bg-blue-500",
 		},
 		{
 			label: "Reported Users",
-			value: 5,
+			value: 0,
 			icon: ReportIcon,
 			iconBg: "bg-red-500",
 		},
 		{
 			label: "Banned Users",
-			value: 17,
+			value: 0,
 			icon: BannedIcon,
 			iconBg: "bg-pink-500",
 		},
 		{
 			label: "Flagged Content",
-			value: 3,
+			value: 0,
 			icon: FlagIcon,
 			iconBg: "bg-indigo-500",
 		},
 	] as const;
 
-	const moderationEvents = [
-		{
-			id: "EVT-2401",
-			title: "Beach Wedding Ceremony",
-			organizer: "Emma Wilson",
-			email: "emma@example.com",
-			location: "Essaouira Beach",
-			date: "July 20, 2026",
-			submittedAgo: "2 hours ago",
-			guests: 120,
-			budget: "6,000",
-			status: "Pending",
-		},
-		{
-			id: "EVT-2402",
-			title: "Tech Startup Launch",
-			organizer: "Tech Innovations Ltd",
-			email: "contact@techinnovations.com",
-			location: "Casablanca Convention",
-			date: "March 15, 2026",
-			submittedAgo: "5 hours ago",
-			guests: 300,
-			budget: "12,000",
-			status: "Pending",
-		},
-	] ;
+function formatDate(value?: string | null) {
+	if (!value) {
+		return '-';
+	}
+
+	return new Date(value).toLocaleDateString();
+}
+
+function mapStatus(value?: string | null) {
+	if (value === 'planning') {
+		return 'Pending';
+	}
+
+	if (value === 'cancelled') {
+		return 'Rejected';
+	}
+
+	return 'Approved';
+}
+
 export default function Moderation() {
-	
+	const [stats, setStats] = useState<StatItem[]>(defaultStats as StatItem[]);
+	const [moderationEvents, setModerationEvents] = useState<ModerationEvent[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState('');
+	const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+
+	useEffect(() => {
+		const loadModerationData = async () => {
+			const token = localStorage.getItem('token');
+
+			if (!token) {
+				setError('No token found. Please login again.');
+				setLoading(false);
+				return;
+			}
+
+			try {
+				const headers = {
+					Authorization: `Bearer ${token}`,
+					Accept: 'application/json',
+				};
+
+				const [statsResponse, usersResponse, eventsResponse] = await Promise.all([
+					axios.get('http://127.0.0.1:8000/api/admin/statistics', { headers }),
+					axios.get('http://127.0.0.1:8000/api/admin/users', { headers }),
+					axios.get('http://127.0.0.1:8000/api/admin/events', { headers }),
+				]);
+
+				const events: ApiEvent[] = eventsResponse.data?.events || [];
+				const users = usersResponse.data?.users || [];
+
+				const pendingEventsCount = events.filter((event) => event.status === 'planning').length;
+				const bannedUsersCount = users.filter((user: any) => user.is_banned).length;
+
+				setStats([
+					{ label: 'Pending Events', value: pendingEventsCount, icon: AdminEventIcon, iconBg: 'bg-blue-500' },
+					{ label: 'Reported Users', value: statsResponse.data?.users || 0, icon: ReportIcon, iconBg: 'bg-red-500' },
+					{ label: 'Banned Users', value: bannedUsersCount, icon: BannedIcon, iconBg: 'bg-pink-500' },
+					{ label: 'Flagged Content', value: statsResponse.data?.reviews || 0, icon: FlagIcon, iconBg: 'bg-indigo-500' },
+				]);
+
+				setModerationEvents(
+					events.map((event) => ({
+						eventId: event.id,
+						id: `EVT-${event.id}`,
+						title: event.title,
+						organizer: event.organizer?.name || 'Unknown organizer',
+						email: event.organizer?.email || '-',
+						location: event.location || '-',
+						date: formatDate(event.event_date),
+						submittedAgo: formatDate(event.created_at),
+						guests: event.guests_count || 0,
+						budget: '0',
+						status: mapStatus(event.status),
+					}))
+				);
+			} catch (err: any) {
+				setError('Failed to load moderation data.');
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		loadModerationData();
+	}, []);
+
+	const updateEventStatus = async (event: ModerationEvent, status: 'in_progress' | 'cancelled') => {
+		const token = localStorage.getItem('token');
+
+		if (!token) {
+			setError('No token found. Please login again.');
+			return;
+		}
+
+		setActionLoadingId(event.eventId);
+		setError('');
+
+		try {
+			await axios.patch(
+				`http://127.0.0.1:8000/api/events/${event.eventId}`,
+				{ status },
+				{ headers: { Authorization: `Bearer ${token}` } }
+			);
+
+			const newStatus = status === 'cancelled' ? 'Rejected' : 'Approved';
+
+			setModerationEvents(
+				moderationEvents.map((currentEvent) => {
+					if (currentEvent.eventId === event.eventId) {
+						return { ...currentEvent, status: newStatus };
+					}
+
+					return currentEvent;
+				})
+			);
+		} catch (err: any) {
+			setError('Failed to update event status.');
+		} finally {
+			setActionLoadingId(null);
+		}
+	};
 
 	return (
 		<AdminLayout
@@ -67,6 +199,9 @@ export default function Moderation() {
 			subtitle="Review users, events, and handle reports"
 		>
 			<main className="space-y-6 p-4 md:p-6">
+				{loading ? <p className="text-sm text-gray-300">Loading moderation data...</p> : null}
+				{error ? <p className="text-sm text-red-400">{error}</p> : null}
+
 				<section>
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
 						{stats.map((stat) => (
@@ -141,12 +276,20 @@ export default function Moderation() {
 
 							<div className="mt-5 border-t border-white/10 pt-4">
 								<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-									<button className="rounded-md bg-emerald-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-emerald-600">
-										Approve
+									<button
+										onClick={() => updateEventStatus(event, 'in_progress')}
+										disabled={actionLoadingId === event.eventId}
+										className="rounded-md bg-emerald-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-emerald-600 disabled:opacity-50"
+									>
+										{actionLoadingId === event.eventId ? 'Saving...' : 'Approve'}
 									</button>
 
-									<button className="rounded-md bg-rose-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-600">
-										Reject
+									<button
+										onClick={() => updateEventStatus(event, 'cancelled')}
+										disabled={actionLoadingId === event.eventId}
+										className="rounded-md bg-rose-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-600 disabled:opacity-50"
+									>
+										{actionLoadingId === event.eventId ? 'Saving...' : 'Reject'}
 									</button>
 								</div>
 							</div>
