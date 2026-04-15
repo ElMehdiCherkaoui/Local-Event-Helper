@@ -1,6 +1,28 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+
+function getRoleId(user: any) {
+  const rawRoleId = user?.role_id ?? user?.role?.id;
+  const roleId = Number(rawRoleId);
+  return Number.isNaN(roleId) ? null : roleId;
+}
+
+function dashboardByRole(roleId: number | null) {
+  if (roleId === 1) {
+    return "/admin/dashboard";
+  }
+
+  if (roleId === 2) {
+    return "/organizer/dashboard";
+  }
+
+  if (roleId === 3) {
+    return "/provider/dashboard";
+  }
+
+  return null;
+}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -13,6 +35,27 @@ export default function Login() {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userText = localStorage.getItem("user");
+
+    if (!token || !userText) {
+      return;
+    }
+
+    try {
+      const user = JSON.parse(userText);
+      const destination = dashboardByRole(getRoleId(user));
+
+      if (destination) {
+        navigate(destination);
+      }
+    } catch {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
+  }, [navigate]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -46,20 +89,16 @@ export default function Login() {
         localStorage.removeItem("rememberEmail");
       }
 
-      const roleName = data.user.role?.name;
-      const roleId = data.user?.role_id;
+      const roleId = getRoleId(data.user);
+      const destination = dashboardByRole(roleId);
 
-      if (roleName === "admin" || roleId === 1) {
-        navigate("/admin/dashboard");
+      if (destination) {
+        navigate(destination, { replace: true });
         return;
       }
 
-      if (roleName === "provider" || roleId === 3) {
-        navigate("/provider/dashboard");
-        return;
-      }
-
-      navigate("/organizer/dashboard");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
     } catch (err: any) {
       setError("Server error. Please try again.");
     } finally {
