@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import ProfileIconOrganizateur from "../assets/icons/ProfileIconOrganizateur.svg";
 import MessagesIconOrganizateur from "../assets/icons/MessagesIconOrganizateur.svg";
@@ -9,8 +9,8 @@ import DashboardIconOrganizateur from "../assets/icons/DashboardIconOrganizateur
 
 type OrganizerLayoutProps = {
   children: ReactNode;
-  title?: string;
-  subtitle?: string;
+  title: string;
+  subtitle: string;
 };
 
 export default function OrganizerLayout({
@@ -19,8 +19,31 @@ export default function OrganizerLayout({
   subtitle,
 }: OrganizerLayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = async () => {
+    const token = localStorage.getItem('token');
+
+    if (token) {
+      try {
+        await fetch('http://127.0.0.1:8000/api/logout', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+      } catch {
+  
+      }
+    }
+
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen w-full bg-[#2f2f2f] font-sans">
@@ -108,6 +131,7 @@ export default function OrganizerLayout({
 
               <button
                 type="button"
+                onClick={handleLogout}
                 className="mt-4 w-full rounded-2xl border border-white/10 py-2.5 text-center text-md font-medium hover:bg-red-500 hover:text-black text-red-400"
               >
                 Sign out
