@@ -1,228 +1,195 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
 import AdminLayout from "../../layouts/AdminLayout";
-import AdminEventIcon from '../../assets/icons/AdminIconEvents.svg';
-import ActiveIcon from '../../assets/icons/ActiveIcon.svg';
-import CompletedIcon from '../../assets/icons/CompletedIcon.svg';
-import UpIcon from '../../assets/icons/UpIcon.svg';
+import AdminEventIcon from "../../assets/icons/AdminIconEvents.svg";
+import ActiveIcon from "../../assets/icons/ActiveIcon.svg";
+import CompletedIcon from "../../assets/icons/CompletedIcon.svg";
+import UpIcon from "../../assets/icons/UpIcon.svg";
 
-type StatCardProps = {
-	label: string;
-	value: string;
-	icon: string;
-	subtitle: string;
-	iconColor?: string;
+type AdminStats = {
+  events: number;
+  services: number;
+  bookings: number;
+  reviews: number;
 };
 
-const recentEvents = [
-	{
-		id: "EVT-1234",
-		name: "Summer Wedding",
-		owner: "El Mehdi Cherkaoui",
-		date: "June 15, 2026",
-		location: "Marrakech",
-		guests: 150,
-		budget: "$5,000",
-		status: "Active",
-		statusClass: "bg-green-500/20 text-green-300",
-		created_at: "",
-	},
-	{
-		id: "EVT-1236",
-		name: "Corporate Conference",
-		owner: "Business Solutions Inc.",
-		date: "April 18, 2026",
-		location: "Rabat",
-		guests: 200,
-		budget: "$4,500",
-		status: "Upcoming",
-		statusClass: "bg-blue-500/20 text-blue-300",
-		created_at: "",
-	},
-	{
-		id: "EVT-1236",
-		name: "Birthday Party",
-		owner: "Alice Smith",
-		date: "Feb 1, 2026",
-		location: "Casablanca",
-		guests: 50,
-		budget: "$800",
-		status: "Completed",
-		statusClass: "bg-purple-500/20 text-purple-300",
-		created_at: "",
-	},
-];
+type AdminEvent = {
+  id: number;
+  title: string;
+  event_date?: string | null;
+  location?: string | null;
+  guests_count?: number | null;
+  status?: string | null;
+  created_at?: string;
+  organizer?: {
+    name?: string;
+  };
+};
 
-function StatCard({
-	label,
-	value,
-	icon,
-	subtitle,
+const emptyStats: AdminStats = {
+  events: 0,
+  services: 0,
+  bookings: 0,
+  reviews: 0,
+};
 
-}: StatCardProps) {
-	return (
-		<div className="rounded-xl border border-white/10 bg-[#1E293B] p-4">
-			<div className="mb-3 flex items-start justify-between">
-				<p className="text-xs text-gray-400">{label}</p>
-				<img src={icon} alt="" className="w-4" />
-			</div>
+function formatDate(value?: string | null) {
+  if (!value) {
+    return "-";
+  }
 
-			<h4 className="text-2xl font-bold text-white">{value}</h4>
-			<p className="mt-1 text-xs text-gray-500">{subtitle}</p>
-		</div>
-	);
+  return new Date(value).toLocaleDateString();
+}
+
+function statusClass(status?: string | null) {
+  if (status === "completed") {
+    return "bg-purple-500/20 text-purple-300";
+  }
+
+  if (status === "in_progress") {
+    return "bg-green-500/20 text-green-300";
+  }
+
+  if (status === "cancelled") {
+    return "bg-red-500/20 text-red-300";
+  }
+
+  return "bg-blue-500/20 text-blue-300";
 }
 
 export default function Events() {
-	return (
-		<AdminLayout
-			title="Events & Statistics"
-			subtitle="View and manage all platform events"
-		>
-			<main className="space-y-4 p-4 md:p-6">
-				<section>
-					<h3 className="mb-3 text-sm font-semibold text-white">
-						Event Statistics
-					</h3>
+  const [stats, setStats] = useState<AdminStats>(emptyStats);
+  const [events, setEvents] = useState<AdminEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-						<StatCard
-							label="Total Events"
-							value="3,456"
-							icon={AdminEventIcon}
-							subtitle="All time"
-							iconColor="text-blue-400"
-						/>
-						<StatCard
-							label="Active Events"
-							value="234"
-							icon={ActiveIcon}
-							subtitle="Ongoing"
-							iconColor="text-green-400"
-						/>
-						<StatCard
-							label="Completed"
-							value="2,890"
-							icon={CompletedIcon}
-							subtitle="Finished"
-							iconColor="text-purple-400"
-						/>
-						<StatCard
-							label="This Month"
-							value="127"
-							icon={UpIcon}
-							subtitle="+8%"
-							iconColor="text-emerald-400"
-						/>
-					</div>
-				</section>
-				<h3 className="mb-4 text-sm font-semibold text-white">
-					Provider Statistics
-				</h3>
-				<section className="rounded-xl border border-white/10 bg-[#1E293B] p-4">
+  useEffect(() => {
+    const loadEvents = async () => {
+      const token = localStorage.getItem("token");
 
+      if (!token) {
+        setError("No token found. Please login again.");
+        setLoading(false);
+        return;
+      }
 
-					<div className="space-y-4">
-						<div className="rounded-md border border-white/30 bg-[#0F172A] p-4">
-							<p className="text-xs text-gray-400">Total Providers</p>
-							<p className="mt-1 text-2xl font-bold text-white">428</p>
-						</div>
+      try {
+        const [statsResponse, eventsResponse] = await Promise.all([
+          axios.get("http://127.0.0.1:8000/api/admin/statistics", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          axios.get("http://127.0.0.1:8000/api/admin/events", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        ]);
 
-						<div className=" h-[0.1em] w-fullrounded bg-white/30"></div>
+        setStats({
+          events: statsResponse.data?.events || 0,
+          services: statsResponse.data?.services || 0,
+          bookings: statsResponse.data?.bookings || 0,
+          reviews: statsResponse.data?.reviews || 0,
+        });
 
-						<div className="space-y-3 text-xs text-gray-300">
-							<div>
-								<div className="mb-1 flex items-center justify-between">
-									<span>Photography</span>
-									<span>150</span>
-								</div>
-								<div className="h-1.5 rounded bg-[#1c2b49]">
-									<div className="h-1.5 w-[65%] rounded bg-blue-500"></div>
-								</div>
-							</div>
+        setEvents(eventsResponse.data?.events || []);
+      } catch (err: any) {
+        setError( "Failed to load events.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-							<div>
-								<div className="mb-1 flex items-center justify-between">
-									<span>Catering</span>
-									<span>128</span>
-								</div>
-								<div className="h-1.5 rounded bg-[#1c2b49]">
-									<div className="h-1.5 w-[55%] rounded bg-purple-500"></div>
-								</div>
-							</div>
+    loadEvents();
+  }, []);
 
-							<div>
-								<div className="mb-1 flex items-center justify-between">
-									<span>DJ/Music</span>
-									<span>86</span>
-								</div>
-								<div className="h-1.5 rounded bg-[#1c2b49]">
-									<div className="h-1.5 w-[40%] rounded bg-pink-500"></div>
-								</div>
-							</div>
+  return (
+    <AdminLayout title="Events & Statistics" subtitle="Simple event dashboard">
+      <main className="space-y-4 p-4 md:p-6">
+        {loading ? (
+          <p className="text-sm text-gray-300">Loading events...</p>
+        ) : null}
+        {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
-							<div >
-								<div className="mb-1 flex items-center justify-between">
-									<span>Decoration</span>
-									<span>64</span>
-								</div>
-								<div className="h-1.5 rounded bg-[#1c2b49]">
-									<div className="h-1.5 w-[30%] rounded bg-green-500"></div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</section>
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-white">Event Statistics</h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-white/10 bg-[#1E293B] p-4">
+              <div className="mb-3 flex items-start justify-between">
+                <p className="text-xs text-gray-400">Total Events</p>
+                <img src={AdminEventIcon} alt="" className="w-4" />
+              </div>
+              <h4 className="text-2xl font-bold text-white">{stats.events}</h4>
+            </div>
 
-				<section className="space-y-3">
-					<h3 className="text-sm font-semibold text-white">Recent Events</h3>
+            <div className="rounded-xl border border-white/10 bg-[#1E293B] p-4">
+              <div className="mb-3 flex items-start justify-between">
+                <p className="text-xs text-gray-400">Bookings</p>
+                <img src={ActiveIcon} alt="" className="w-4" />
+              </div>
+              <h4 className="text-2xl font-bold text-white">
+                {stats.bookings}
+              </h4>
+            </div>
 
-					{recentEvents.map((event) => (
-						<article
-							key={event.id}
-							className="rounded-xl border border-white/10 bg-[#1E293B] p-4 text-white"
-						>
-							<div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-								<div>
-									<div className="flex flex-wrap items-center gap-2">
-										<h4 className="font-semibold">{event.name}</h4>
-										<span
-											className={`rounded px-2 py-0.5 text-[10px] ${event.statusClass}`}
-										>
-											{event.status}
-										</span>
-									</div>
+            <div className="rounded-xl border border-white/10 bg-[#1E293B] p-4">
+              <div className="mb-3 flex items-start justify-between">
+                <p className="text-xs text-gray-400">Reviews</p>
+                <img src={CompletedIcon} alt="" className="w-4" />
+              </div>
+              <h4 className="text-2xl font-bold text-white">{stats.reviews}</h4>
+            </div>
 
-									<p className="mt-1 text-xs text-gray-400">{event.owner}</p>
+            <div className="rounded-xl border border-white/10 bg-[#1E293B] p-4">
+              <div className="mb-3 flex items-start justify-between">
+                <p className="text-xs text-gray-400">Services</p>
+                <img src={UpIcon} alt="" className="w-4" />
+              </div>
+              <h4 className="text-2xl font-bold text-white">
+                {stats.services}
+              </h4>
+            </div>
+          </div>
+        </section>
 
-									<p className="mt-2 text-xs text-gray-300">
-										{event.date} · {event.location} · {event.guests} guests ·{" "}
-										{event.budget}
-									</p>
-								</div>
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold text-white">Recent Events</h3>
 
-								<p className="text-xs text-blue-300">{event.created_at}</p>
-							</div>
-						</article>
-					))}
-				</section>
+          {events.map((event) => (
+            <div
+              key={event.id}
+              className="rounded-xl border border-white/10 bg-[#1E293B] p-4 text-white"
+            >
+              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-semibold">{event.title}</h4>
+                    <span
+                      className={`rounded px-2 py-0.5 text-[10px] ${statusClass(event.status)}`}
+                    >
+                      {event.status || "planning"}
+                    </span>
+                  </div>
 
-				<div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-					<button className="rounded border border-white/10 bg-[#091427] px-3 py-1.5 text-xs text-gray-300">
-						Prev
-					</button>
-					<button className="rounded bg-blue-500 px-3 py-1.5 text-xs text-white">
-						1
-					</button>
-					<button className="rounded border border-white/10 bg-[#091427] px-3 py-1.5 text-xs text-gray-300">
-						2
-					</button>
-					<button className="rounded border border-white/10 bg-[#091427] px-3 py-1.5 text-xs text-gray-300">
-						3
-					</button>
-					<button className="rounded border border-white/10 bg-[#091427] px-3 py-1.5 text-xs text-gray-300">
-						Next
-					</button>
-				</div>
-			</main>
-		</AdminLayout>
-	);
+                  <p className="mt-1 text-xs text-gray-400">
+                    {event.organizer?.name || "Unknown organizer"}
+                  </p>
+                  <p className="mt-2 text-xs text-gray-300">
+                    {formatDate(event.event_date)} · {event.location || "-"} ·{" "}
+                    {event.guests_count || 0} guests
+                  </p>
+                </div>
+
+                <p className="text-xs text-blue-300">
+                  Created {formatDate(event.created_at)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </section>
+      </main>
+    </AdminLayout>
+  );
 }
