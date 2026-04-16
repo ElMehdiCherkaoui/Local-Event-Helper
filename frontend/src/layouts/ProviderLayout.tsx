@@ -17,7 +17,6 @@ const navItems: NavItem[] = [
 	{ label: 'Dashboard', path: '/provider/dashboard', mobileLabel: 'Home' },
 	{ label: 'My Services', path: '/provider/services', mobileLabel: 'Services' },
 	{ label: 'Booking Requests', path: '/provider/bookings', mobileLabel: 'Bookings' },
-	{ label: 'Reviews & Ratings', path: '/provider/reviews', mobileLabel: 'Reviews' },
 	{ label: 'Availability', path: '/provider/availability', mobileLabel: 'Availability' },
 	{ label: 'Messages', path: '/provider/messages', mobileLabel: 'Messages' },
 	{ label: 'My Profile', path: '/provider/profile', mobileLabel: 'Profile' },
@@ -26,6 +25,24 @@ const navItems: NavItem[] = [
 export default function ProviderLayout({ children, title, subtitle }: ProviderLayoutProps) {
 	const location = useLocation();
 	const navigate = useNavigate();
+
+	let loggedUserName = 'Provider User';
+	let loggedUserInitials = 'PU';
+
+	try {
+		const userText = localStorage.getItem('user');
+		if (userText) {
+			const user = JSON.parse(userText);
+			const fullName = (user?.name || '').trim();
+
+			if (fullName) {
+				loggedUserName = fullName;
+				loggedUserInitials = fullName[0].toUpperCase();
+			}
+		}
+	} catch {
+		
+	}
 
 	const isActive = (path: string) => location.pathname === path;
 
@@ -80,10 +97,10 @@ export default function ProviderLayout({ children, title, subtitle }: ProviderLa
 						<div className='border-t border-white/10 p-4'>
 							<div className='flex items-center gap-3'>
 								<div className='flex h-8 w-8 items-center justify-center rounded-full bg-[#8B5CF6] text-[10px] font-semibold'>
-									SC
+									{loggedUserInitials}
 								</div>
 								<div>
-									<p className='text-xs font-medium'>Sarah Catering</p>
+									<p className='text-xs font-medium'>{loggedUserName}</p>
 									<p className='text-[10px] text-purple-100/70'>Caterer</p>
 								</div>
 							</div>
