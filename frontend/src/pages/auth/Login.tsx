@@ -89,7 +89,7 @@ export default function Login() {
         localStorage.removeItem("rememberEmail");
       }
 
-      const roleId = getRoleId(data.user);
+      const roleId = (data.user.role_id ?? data.user.role?.id) as number;
       const destination = dashboardByRole(roleId);
 
       if (destination) {
