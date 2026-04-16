@@ -21,6 +21,24 @@ export default function OrganizerLayout({
   const location = useLocation();
   const navigate = useNavigate();
 
+  let loggedUserName = "Organizer User";
+  let loggedUserInitials = "OU";
+
+  try {
+    const userText = localStorage.getItem("user");
+    if (userText) {
+      const user = JSON.parse(userText);
+      const fullName = (user?.name || "").trim();
+
+      if (fullName) {
+        loggedUserName = fullName;
+				loggedUserInitials = fullName[0].toUpperCase();
+      }
+    }
+  } catch {
+
+  }
+
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = async () => {
@@ -32,7 +50,6 @@ export default function OrganizerLayout({
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
           },
         });
       } catch {
@@ -120,11 +137,11 @@ export default function OrganizerLayout({
             <div className="border-t border-white/10 p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold">
-                  JD
+                  {loggedUserInitials}
                 </div>
 
                 <div>
-                  <p className="text-xs font-medium">ElMehdi Cherkaoui</p>
+                  <p className="text-xs font-medium">{loggedUserName}</p>
                   <p className="text-[10px] text-gray-400">Organizer</p>
                 </div>
               </div>
