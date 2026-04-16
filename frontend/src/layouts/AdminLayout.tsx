@@ -22,6 +22,24 @@ export default function AdminLayout({
 	const location = useLocation();
 	const navigate = useNavigate();
 
+	let loggedUserName = 'Admin User';
+	let loggedUserInitials = 'AU';
+
+	try {
+		const userText = localStorage.getItem('user');
+		if (userText) {
+			const user = JSON.parse(userText);
+			const fullName = (user?.name || '').trim();
+
+			if (fullName) {
+				loggedUserName = fullName;
+				loggedUserInitials = fullName[0].toUpperCase();
+			}
+		}
+	} catch {
+		
+	}
+
 	const closeSidebar = () => setIsSidebarOpen(false);
 	const openSidebar = () => setIsSidebarOpen(true);
 
@@ -120,6 +138,17 @@ export default function AdminLayout({
 								<img src={AdminIconLogs} alt="Logs" className="h-5 w-5" />
 								<span>Logs</span>
 							</Link>
+							<div className="px-4 pt-4">
+								<div className="flex items-center gap-3 rounded-md border border-white/10 bg-white/5 p-3">
+									<div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+										{loggedUserInitials}
+									</div>
+									<div>
+										<p className="text-xs font-medium text-white">{loggedUserName}</p>
+										<p className="text-[10px] text-gray-400">Admin</p>
+									</div>
+								</div>
+							</div>
 							<div className="p-4">
 								<button
 									type="button"
