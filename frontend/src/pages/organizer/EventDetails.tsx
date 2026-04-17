@@ -1,537 +1,1170 @@
-import OrganizerLayout from '../../layouts/OrganizerLayout';
-import { Link, useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import axios from "axios";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
-type ExpenseItem = {
-	id: number;
-	name: string;
-	provider: string;
-	amount: string;
-	status: 'Paid' | 'Pending';
+import OrganizerLayout from "../../layouts/OrganizerLayout";
+
+type EventItem = {
+  id: number;
+  title: string;
+  description?: string | null;
+  event_date?: string | null;
+  location?: string | null;
+  guests_count?: number | null;
+  status?: string | null;
 };
 
 type TaskItem = {
-	id: number;
-	title: string;
-	dueDate: string;
-	state: 'done' | 'todo' | 'urgent';
+  id: number;
+  title: string;
+  description?: string | null;
+  due_date?: string | null;
+  status?: string | null;
 };
 
-type ProviderItem = {
-	id: number;
-	name: string;
-	service: string;
-	rating: number;
-	price: string;
-	status: 'Confirmed' | 'Pending';
+type BudgetItem = {
+  id: number;
+  total_amount: number;
+  spent_amount: number;
+  remaining_amount: number;
 };
 
-const expenses: ExpenseItem[] = [
-	{ id: 1, name: 'John Photography', provider: 'Photos', amount: '$800', status: 'Paid' },
-	{ id: 2, name: 'Sarah Catering', provider: 'Catering (50 guests)', amount: '$1,500', status: 'Paid' },
-	{ id: 3, name: 'DJ Mike', provider: 'Music/Entertainment', amount: '$700', status: 'Pending' },
-	{ id: 4, name: 'Decorations & Flowers', provider: 'Venue decoration', amount: '$200', status: 'Paid' },
-];
+type BookingItem = {
+  id: number;
+  event_id?: number | null;
+  status?: string | null;
+  budget_amount?: number | string | null;
+  provider?: {
+    id?: number | null;
+    name?: string | null;
+  } | null;
+  service?: {
+    id?: number | null;
+    title?: string | null;
+    category?: string | null;
+  } | null;
+};
 
-const tasks: TaskItem[] = [
-	{ id: 1, title: 'Book photographer', dueDate: 'Due May 1, 2026', state: 'done' },
-	{ id: 2, title: 'Confirm catering menu', dueDate: 'Due May 10, 2026', state: 'done' },
-	{ id: 3, title: 'Book DJ', dueDate: 'Due May 15, 2026', state: 'done' },
-	{ id: 4, title: 'Order decorations', dueDate: 'Due May 30, 2026', state: 'done' },
-	{ id: 5, title: 'Send invitations', dueDate: 'Due June 1, 2026', state: 'todo' },
-	{ id: 6, title: 'Finalize guest count', dueDate: 'Due June 10, 2026', state: 'todo' },
-	{ id: 7, title: 'Final venue walkthrough', dueDate: 'Due June 12, 2026 - Urgent', state: 'urgent' },
-];
+type EventForm = {
+  title: string;
+  description: string;
+  event_date: string;
+  location: string;
+  guests_count: string;
+  status: string;
+};
 
-const providers: ProviderItem[] = [
-	{ id: 1, name: 'John Photography', service: 'Photos', rating: 4.8, price: '$800', status: 'Confirmed' },
-	{ id: 2, name: 'Sarah Catering', service: 'Catering', rating: 4.9, price: '$1,500', status: 'Confirmed' },
-	{ id: 3, name: 'DJ Mike', service: 'DJ/Entertainment', rating: 4.7, price: '$700', status: 'Pending' },
-];
+type BudgetForm = {
+  total_amount: string;
+  spent_amount: string;
+};
 
-function taskClasses(state: TaskItem['state']): string {
-	if (state === 'done') {
-		return 'border-green-100 bg-green-50';
-	}
+type TaskForm = {
+  title: string;
+  description: string;
+  due_date: string;
+  status: string;
+};
 
-	if (state === 'urgent') {
-		return 'border-red-100 bg-red-50';
-	}
+const emptyEventForm: EventForm = {
+  title: "",
+  description: "",
+  event_date: "",
+  location: "",
+  guests_count: "",
+  status: "planning",
+};
 
-	return 'border-slate-200 bg-white';
-}
+const emptyBudgetForm: BudgetForm = {
+  total_amount: "",
+  spent_amount: "",
+};
+
+const emptyTaskForm: TaskForm = {
+  title: "",
+  description: "",
+  due_date: "",
+  status: "todo",
+};
 
 export default function EventDetails() {
-	const { eventId } = useParams();
-	const [popupType, setPopupType] = useState('');
+  const { eventId } = useParams();
+  const navigate = useNavigate();
 
-	const openPopup = (type: string) => {
-		setPopupType(type);
-	};
+  const [event, setEvent] = useState<EventItem | null>(null);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [budget, setBudget] = useState<BudgetItem | null>(null);
+  const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [savedMessageProviderIds, setSavedMessageProviderIds] = useState<
+    number[]
+  >([]);
 
-	const closePopup = () => {
-		setPopupType('');
-	};
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [popupType, setPopupType] = useState<
+    "" | "event" | "budget" | "task" | "deleteTask" | "deleteBudget"
+  >("");
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
+  const [eventForm, setEventForm] = useState<EventForm>(emptyEventForm);
+  const [budgetForm, setBudgetForm] = useState<BudgetForm>(emptyBudgetForm);
+  const [taskForm, setTaskForm] = useState<TaskForm>(emptyTaskForm);
 
-	let popupTitle = 'Provider Details';
+  const messageLaterStorageKey = `event:${eventId || "unknown"}:messageLaterProviders`;
 
-	if (popupType === 'editEvent') {
-		popupTitle = 'Edit Event';
-	} else if (popupType === 'addExpense') {
-		popupTitle = 'Add Expense';
-	} else if (popupType === 'addTask') {
-		popupTitle = 'Add Task';
-	} else if (popupType === 'editTask') {
-		popupTitle = 'Edit Task';
-	} else if (popupType === 'findProviders') {
-		popupTitle = 'Find Providers';
-	} else if (popupType === 'messageProvider') {
-		popupTitle = 'Message Provider';
-	}
+  const readSavedMessageProviderIds = () => {
+    const savedText = localStorage.getItem(messageLaterStorageKey);
 
-	const totalBudget = 5000;
-	const spentBudget = 3200;
-	const remainingBudget = totalBudget - spentBudget;
-	const completion = Math.round((tasks.filter((task) => task.state === 'done').length / tasks.length) * 100);
+    if (!savedText) {
+      return [] as number[];
+    }
 
-	return (
-		<OrganizerLayout
-			title='Summer Wedding'
-			subtitle={`Event Details & Management${eventId ? ` • #${eventId}` : ''}`}
-		>
-			<div className='space-y-5'>
-				<div className='flex items-center justify-end gap-2'>
-					<button
-						type='button'
-						onClick={() => openPopup('editEvent')}
-						className='rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 sm:px-4'
-					>
-						Edit
-					</button>
-					<Link
-						to='/organizer/events'
-						className='rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 sm:px-4'
-					>
-						← Back
-					</Link>
-				</div>
+    try {
+      const parsed = JSON.parse(savedText);
+      if (!Array.isArray(parsed)) {
+        return [] as number[];
+      }
 
-				<section className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5'>
-					<h3 className='text-base font-semibold text-slate-900'>Event Overview</h3>
-					<div className='mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4'>
-						<div>
-							<p className='text-xs text-slate-500'>Date</p>
-							<p className='font-semibold text-slate-900'>June 15, 2026</p>
-						</div>
-						<div>
-							<p className='text-xs text-slate-500'>Location</p>
-							<p className='font-semibold text-slate-900'>Marrakech</p>
-						</div>
-						<div>
-							<p className='text-xs text-slate-500'>Guests</p>
-							<p className='font-semibold text-slate-900'>150</p>
-						</div>
-						<div>
-							<p className='text-xs text-slate-500'>Status</p>
-							<p className='inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-600'>
-								In Progress
-							</p>
-						</div>
-					</div>
-					<p className='mt-4 text-sm text-slate-500'>
-						A beautiful outdoor wedding celebration with family and friends. The ceremony
-						will take place in the historical Menara garden followed by a reception with
-						dinner and dancing.
-					</p>
-				</section>
+      return parsed
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item > 0);
+    } catch {
+      return [] as number[];
+    }
+  };
 
-				<section className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5'>
-					<div className='flex items-center justify-between gap-3'>
-						<h3 className='text-base font-semibold text-slate-900'>Budget Tracking</h3>
-						<button
-							type='button'
-							onClick={() => openPopup('addExpense')}
-							className='rounded-lg bg-green-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-green-600'
-						>
-							+ Add Expense
-						</button>
-					</div>
+  const formatBookingStatus = (status?: string | null) => {
+    if (status === "confirmed") {
+      return {
+        label: "Confirmed",
+        className: "text-green-600",
+      };
+    }
 
-					<div className='mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3'>
-						<div className='rounded-lg bg-green-50 p-3'>
-							<p className='text-xs text-slate-500'>Total Budget</p>
-							<p className='text-2xl font-bold text-green-600'>$5,000</p>
-						</div>
-						<div className='rounded-lg bg-blue-50 p-3'>
-							<p className='text-xs text-slate-500'>Spent</p>
-							<p className='text-2xl font-bold text-blue-600'>$3,200</p>
-						</div>
-						<div className='rounded-lg bg-orange-50 p-3'>
-							<p className='text-xs text-slate-500'>Remaining</p>
-							<p className='text-2xl font-bold text-orange-500'>${remainingBudget}</p>
-						</div>
-					</div>
+    if (status === "declined") {
+      return {
+        label: "Declined",
+        className: "text-red-500",
+      };
+    }
 
-					<div className='mt-4'>
-						<div className='mb-2 flex items-center justify-between text-xs'>
-							<span className='text-slate-500'>Budget Used</span>
-							<span className='font-semibold text-slate-700'>${spentBudget.toLocaleString()} / ${totalBudget.toLocaleString()}</span>
-						</div>
-						<div className='h-2 rounded-full bg-slate-100'>
-							<div className='h-2 w-[64%] rounded-full bg-blue-600' />
-						</div>
-					</div>
+    if (status === "cancelled") {
+      return {
+        label: "Cancelled",
+        className: "text-slate-500",
+      };
+    }
 
-					<div className='mt-5'>
-						<h4 className='text-sm font-semibold text-slate-900'>Expense Breakdown</h4>
-						<div className='mt-3 space-y-2'>
-							{expenses.map((expense) => (
-								<div
-									key={expense.id}
-									className='flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2'
-								>
-									<div>
-										<p className='text-sm font-medium text-slate-800'>{expense.name}</p>
-										<p className='text-xs text-slate-500'>{expense.provider}</p>
-									</div>
-									<div className='text-right'>
-										<p className='text-sm font-semibold text-slate-900'>{expense.amount}</p>
-										<p
-											className={`text-xs font-medium ${expense.status === 'Paid' ? 'text-green-600' : 'text-orange-500'}`}
-										>
-											{expense.status}
-										</p>
-									</div>
-								</div>
-							))}
-						</div>
-					</div>
-				</section>
+    return {
+      label: "Pending",
+      className: "text-orange-500",
+    };
+  };
 
-				<section className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5'>
-					<div className='flex items-center justify-between gap-3'>
-						<h3 className='text-base font-semibold text-slate-900'>Tasks & Checklist</h3>
-						<button
-							type='button'
-							onClick={() => openPopup('addTask')}
-							className='rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700'
-						>
-							+ Add Task
-						</button>
-					</div>
+  const formatBookingPrice = (booking: BookingItem) => {
+    if (booking.budget_amount === null || booking.budget_amount === undefined) {
+      return "Budget not set";
+    }
 
-					<div className='mt-4'>
-						<div className='mb-2 flex items-center justify-between text-xs'>
-							<span className='text-slate-500'>Task Completion</span>
-							<span className='font-semibold text-slate-700'>{completion}% ({tasks.filter((task) => task.state === 'done').length} of {tasks.length})</span>
-						</div>
-						<div className='h-2 rounded-full bg-slate-100'>
-							<div className='h-2 rounded-full bg-green-500' style={{ width: `${completion}%` }} />
-						</div>
-					</div>
+    const amount = Number(booking.budget_amount);
 
-					<div className='mt-3 space-y-2'>
-						{tasks.map((task) => (
-							<div
-								key={task.id}
-								className={`flex items-center justify-between rounded-lg border px-3 py-2 ${taskClasses(task.state)}`}
-							>
-								<div className='flex items-start gap-2'>
-									<input
-										type='checkbox'
-										checked={task.state === 'done'}
-										readOnly
-										className='mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-blue-600'
-									/>
-									<div>
-										<p className='text-sm font-medium text-slate-800'>{task.title}</p>
-										<p className='text-xs text-slate-500'>{task.dueDate}</p>
-									</div>
-								</div>
-								<button
-									type='button'
-									onClick={() => openPopup('editTask')}
-									className='text-xs font-medium text-blue-600 hover:text-blue-700'
-								>
-									Edit
-								</button>
-							</div>
-						))}
-					</div>
-				</section>
+    if (Number.isNaN(amount)) {
+      return "Budget not set";
+    }
 
-				<section className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5'>
-					<div className='flex items-center justify-between gap-3'>
-						<h3 className='text-base font-semibold text-slate-900'>Booked Providers</h3>
-						<button
-							type='button'
-							onClick={() => openPopup('findProviders')}
-							className='rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700'
-						>
-							+ Find More
-						</button>
-					</div>
+    return `$${amount.toLocaleString()}`;
+  };
 
-					<div className='mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3'>
-						{providers.map((provider) => (
-							<div
-								key={provider.id}
-								className='rounded-lg border border-slate-200 p-3'
-							>
-								<div className='flex items-start justify-between gap-2'>
-									<div>
-										<p className='text-sm font-semibold text-slate-800'>{provider.name}</p>
-										<p className='text-xs text-slate-500'>{provider.service}</p>
-										<p className='text-xs text-amber-500'>★ {provider.rating}</p>
-									</div>
-									<p
-										className={`text-xs font-medium ${provider.status === 'Confirmed' ? 'text-green-600' : 'text-orange-500'}`}
-									>
-										{provider.status}
-									</p>
-								</div>
+  const loadData = async () => {
+    const token = localStorage.getItem("token");
 
-								<p className='mt-3 text-sm font-semibold text-green-600'>{provider.price}</p>
+    if (!token || !eventId) {
+      setError("Please sign in again.");
+      setLoading(false);
+      return;
+    }
 
-								<div className='mt-3 grid grid-cols-2 gap-2'>
-									<button
-										type='button'
-										onClick={() => openPopup('messageProvider')}
-										className='rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700'
-									>
-										Message
-									</button>
-									<button
-										type='button'
-										onClick={() => openPopup('viewProvider')}
-										className='rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100'
-									>
-										View
-									</button>
-								</div>
-							</div>
-						))}
-					</div>
-				</section>
+    try {
+      const [eventResponse, tasksResponse, budgetResponse, bookingsResponse] =
+        await Promise.all([
+          axios.get(`http://127.0.0.1:8000/api/events/${eventId}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          axios.get(`http://127.0.0.1:8000/api/events/${eventId}/tasks`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          axios.get(`http://127.0.0.1:8000/api/events/${eventId}/budget`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          axios.get("http://127.0.0.1:8000/api/booking-requests", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        ]);
 
-				{popupType !== '' && (
-					<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4'>
-						<div className='w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl'>
-							<h3 className='text-lg font-semibold text-slate-900'>{popupTitle}</h3>
+      const apiEvent = eventResponse.data?.event as EventItem | undefined;
+      const apiTasks = tasksResponse.data?.tasks ?? [];
+      const apiBudget = budgetResponse.data?.budget ?? null;
+      const apiBookings = (bookingsResponse.data?.bookings ?? []) as BookingItem[];
+      const eventBookings = apiBookings.filter(
+        (booking) => String(booking.event_id) === String(eventId),
+      );
 
-							{popupType === 'editEvent' && (
-								<div className='mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2'>
-									<div className='sm:col-span-2'>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Event Name</label>
-										<input
-											type='text'
-											required
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Date</label>
-										<input
-											type='text'
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Location</label>
-										<input
-											type='text'
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Guests</label>
-										<input
-											type='number'
-											min='1'
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Status</label>
-										<select
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										>
-											<option value='In Progress'>In Progress</option>
-											<option value='Planning'>Planning</option>
-										</select>
-									</div>
-									<div className='sm:col-span-2'>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Description</label>
-										<textarea
-											rows={3}
-											className='w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-								</div>
-							)}
+      setEvent(apiEvent ?? null);
+      setTasks(apiTasks);
+      setBudget(apiBudget);
+      setBookings(eventBookings);
 
-							{popupType === 'addExpense' && (
-								<div className='mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2'>
-									<div className='sm:col-span-2'>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Expense Name</label>
-										<input
-											type='text'
-											required
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-green-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Provider</label>
-										<input
-											type='text'
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-green-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Amount</label>
-										<input
-											type='text'
-											placeholder='$500'
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-green-500'
-										/>
-									</div>
-									<div className='sm:col-span-2'>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Status</label>
-										<select
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-green-500'
-										>
-											<option value='Pending'>Pending</option>
-											<option value='Paid'>Paid</option>
-										</select>
-									</div>
-								</div>
-							)}
+      setEventForm({
+        title: apiEvent?.title || "",
+        description: apiEvent?.description || "",
+        event_date: apiEvent?.event_date
+          ? apiEvent.event_date.slice(0, 10)
+          : "",
+        location: apiEvent?.location || "",
+        guests_count: apiEvent?.guests_count
+          ? String(apiEvent.guests_count)
+          : "",
+        status: apiEvent?.status || "planning",
+      });
 
-							{(popupType === 'addTask' || popupType === 'editTask') && (
-								<div className='mt-4 grid grid-cols-1 gap-3'>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Task Title</label>
-										<input
-											type='text'
-											required
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Due Date</label>
-										<input
-											type='text'
-											placeholder='June 10, 2026'
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Priority</label>
-										<select
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										>
-											<option value='Low'>Low</option>
-											<option value='Normal'>Normal</option>
-											<option value='High'>High</option>
-										</select>
-									</div>
-								</div>
-							)}
+      setBudgetForm({
+        total_amount: apiBudget ? String(apiBudget.total_amount) : "",
+        spent_amount: apiBudget ? String(apiBudget.spent_amount) : "",
+      });
 
-							{popupType === 'findProviders' && (
-								<div className='mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2'>
-									<div className='sm:col-span-2'>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Service</label>
-										<input
-											type='text'
-											required
-											placeholder='Catering, DJ, Photography...'
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>City</label>
-										<input
-											type='text'
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Max Budget</label>
-										<input
-											type='text'
-											placeholder='$1,000'
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-								</div>
-							)}
+      setSavedMessageProviderIds(readSavedMessageProviderIds());
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Failed to load event.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-							{popupType === 'messageProvider' && (
-								<div className='mt-4 grid grid-cols-1 gap-3'>
-									<p className='text-xs text-slate-500'>To: Selected Provider</p>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Subject</label>
-										<input
-											type='text'
-											required
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Message</label>
-										<textarea
-											rows={4}
-											required
-											className='w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-								</div>
-							)}
+  useEffect(() => {
+    loadData();
+  }, [eventId]);
 
-							{popupType === 'viewProvider' && (
-								<div className='mt-4 grid grid-cols-1 gap-3'>
-									<p className='text-sm text-slate-600'>Provider: <span className='font-semibold text-slate-800'>Selected Provider</span></p>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Internal Notes</label>
-										<textarea
-											rows={3}
-											className='w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500'
-										/>
-									</div>
-									<div>
-										<label className='mb-1 block text-xs font-semibold text-slate-600'>Preferred Contact</label>
-										<select
-											className='h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500'
-										>
-											<option value='Message'>Message</option>
-											<option value='Phone'>Phone</option>
-											<option value='Email'>Email</option>
-										</select>
-									</div>
-								</div>
-							)}
+  const openProviderConversation = async (
+    providerId?: number | null,
+  ) => {
+    const token = localStorage.getItem("token");
 
-							<div className='mt-5 flex justify-end gap-2'>
-								<button
-									type='button'
-									onClick={closePopup}
-									className='rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100'
-								>
-									Cancel
-								</button>
-								<button
-									type='button'
-									onClick={closePopup}
-									className='rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700'
-								>
-									Save
-								</button>
-							</div>
-						</div>
-					</div>
-				)}
-			</div>
-		</OrganizerLayout>
-	);
+    let organizerId: number | null = null;
+
+    try {
+      const userText = localStorage.getItem("user");
+      if (userText) {
+        const parsed = JSON.parse(userText);
+        const parsedId = Number(parsed?.id);
+        organizerId = Number.isNaN(parsedId) ? null : parsedId;
+      }
+    } catch {
+      organizerId = null;
+    }
+
+
+
+    try {
+      const response = await axios.post(
+        "http://127.0.0.1:8000/api/conversations",
+        {
+          organizer_id: organizerId,
+          provider_id: providerId,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const conversationId = Number(response.data?.conversation?.id);
+
+      if (!Number.isNaN(conversationId) && conversationId > 0) {
+        navigate(`/organizer/messages?conversationId=${conversationId}`);
+        return;
+      }
+
+      navigate("/organizer/messages");
+    } catch {
+      setError("Failed to open conversation.");
+    }
+  };
+
+  const openEventPopup = () => {
+    setSelectedTask(null);
+    setPopupType("event");
+  };
+
+  const openBudgetPopup = () => {
+    setPopupType("budget");
+  };
+
+  const openTaskPopup = (task?: TaskItem) => {
+    if (task) {
+      setSelectedTask(task);
+      setTaskForm({
+        title: task.title,
+        description: task.description || "",
+        due_date: task.due_date ? task.due_date.slice(0, 10) : "",
+        status: task.status || "todo",
+      });
+    } else {
+      setSelectedTask(null);
+      setTaskForm(emptyTaskForm);
+    }
+
+    setPopupType("task");
+  };
+
+  const openDeleteTaskPopup = (task: TaskItem) => {
+    setSelectedTask(task);
+    setPopupType("deleteTask");
+  };
+
+  const openDeleteBudgetPopup = () => {
+    setPopupType("deleteBudget");
+  };
+
+  const closePopup = () => {
+    setPopupType("");
+    setSelectedTask(null);
+    setTaskForm(emptyTaskForm);
+    setBudgetForm({
+      total_amount: budget ? String(budget.total_amount) : "",
+      spent_amount: budget ? String(budget.spent_amount) : "",
+    });
+    if (event) {
+      setEventForm({
+        title: event.title || "",
+        description: event.description || "",
+        event_date: event.event_date ? event.event_date.slice(0, 10) : "",
+        location: event.location || "",
+        guests_count: event.guests_count ? String(event.guests_count) : "",
+        status: event.status || "planning",
+      });
+    }
+  };
+
+  const handleEventChange = (
+    event: ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value } = event.target;
+    setEventForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleBudgetChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setBudgetForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleTaskChange = (
+    event: ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value } = event.target;
+    setTaskForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const saveEvent = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const token = localStorage.getItem("token");
+
+    if (!token || !eventId) {
+      setError("Please sign in again.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      const response = await axios.patch(
+        `http://127.0.0.1:8000/api/events/${eventId}`,
+        {
+          title: eventForm.title,
+          description: eventForm.description || null,
+          event_date: eventForm.event_date,
+          location: eventForm.location || null,
+          guests_count: eventForm.guests_count
+            ? Number(eventForm.guests_count)
+            : null,
+          status: eventForm.status,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      setEvent(response.data?.event ?? null);
+      closePopup();
+    } catch (err: any) {
+      setError("Failed to save event.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveBudget = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const token = localStorage.getItem("token");
+
+    setSaving(true);
+    setError("");
+
+    const payload = {
+      total_amount: budgetForm.total_amount
+        ? Number(budgetForm.total_amount)
+        : 0,
+      spent_amount: budgetForm.spent_amount
+        ? Number(budgetForm.spent_amount)
+        : 0,
+    };
+
+    try {
+      if (budget) {
+        const response = await axios.patch(
+          `http://127.0.0.1:8000/api/events/${eventId}/budget`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        setBudget(response.data?.budget ?? null);
+      } else {
+        const response = await axios.post(
+          `http://127.0.0.1:8000/api/events/${eventId}/budget`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        setBudget(response.data?.budget ?? null);
+      }
+
+      closePopup();
+    } catch (err: any) {
+      setError("Failed to save budget.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteBudget = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token || !eventId) {
+      setError("Please sign in again.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      await axios.delete(`http://127.0.0.1:8000/api/events/${eventId}/budget`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setBudget(null);
+      closePopup();
+    } catch (err: any) {
+      setError("Failed to delete budget.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveTask = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const token = localStorage.getItem("token");
+
+    setSaving(true);
+    setError("");
+
+    const payload = {
+      title: taskForm.title,
+      description: taskForm.description || null,
+      due_date: taskForm.due_date || null,
+      status: taskForm.status,
+    };
+
+    try {
+      if (selectedTask) {
+        await axios.patch(
+          `http://127.0.0.1:8000/api/events/${eventId}/tasks/${selectedTask.id}`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+      } else {
+        await axios.post(
+          `http://127.0.0.1:8000/api/events/${eventId}/tasks`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+      }
+
+      await loadData();
+      closePopup();
+    } catch (err: any) {
+      setError("Failed to save task.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const markTaskDone = async (task: TaskItem) => {
+    const token = localStorage.getItem("token");
+
+    if (!token || !eventId) {
+      setError("Please sign in again.");
+      return;
+    }
+
+    try {
+      await axios.patch(
+        `http://127.0.0.1:8000/api/events/${eventId}/tasks/${task.id}`,
+        {
+          status: "done",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      await loadData();
+    } catch (err: any) {
+      setError("Failed to update task.");
+    }
+  };
+
+  const deleteTask = async () => {
+    const token = localStorage.getItem("token");
+
+    setSaving(true);
+    setError("");
+
+    try {
+      await axios.delete(
+        `http://127.0.0.1:8000/api/events/${eventId}/tasks/${selectedTask?.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      await loadData();
+      closePopup();
+    } catch (err: any) {
+      setError("Failed to delete task.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <OrganizerLayout
+      title={event?.title || "Event Details"}
+      subtitle={`Event Details & Management${eventId ? ` • #${eventId}` : ""}`}
+    >
+      <div className="space-y-5">
+        {loading ? (
+          <p className="text-sm text-slate-500">Loading event...</p>
+        ) : null}
+        {error ? <p className="text-sm text-red-500">{error}</p> : null}
+
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={openEventPopup}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 sm:px-4"
+          >
+            Edit
+          </button>
+          <Link
+            to="/organizer/events"
+            className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 sm:px-4"
+          >
+            ← Back
+          </Link>
+        </div>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <h3 className="text-base font-semibold text-slate-900">
+            Event Overview
+          </h3>
+          <div className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+            <div>
+              <p className="text-xs text-slate-500">Date</p>
+              <p className="font-semibold text-slate-900">
+                {event?.event_date
+                  ? new Date(event.event_date).toLocaleDateString()
+                  : "No date"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Location</p>
+              <p className="font-semibold text-slate-900">
+                {event?.location || "No location"}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Guests</p>
+              <p className="font-semibold text-slate-900">
+                {event?.guests_count ?? 0}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">Status</p>
+              <p className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-600">
+                {event?.status}
+              </p>
+            </div>
+          </div>
+          <p className="mt-4 text-sm text-slate-500">
+            {event?.description || "No description"}
+          </p>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold text-slate-900">
+              Budget Tracking
+            </h3>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={openBudgetPopup}
+                className="rounded-lg bg-green-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-green-600"
+              >
+                {budget ? "Edit Budget" : "+ Add Budget"}
+              </button>
+              {budget ? (
+                <button
+                  type="button"
+                  onClick={openDeleteBudgetPopup}
+                  className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-100"
+                >
+                  Delete
+                </button>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="rounded-lg bg-green-50 p-3">
+              <p className="text-xs text-slate-500">Total Budget</p>
+              <p className="text-2xl font-bold text-green-600">
+                ${budget?.total_amount?.toLocaleString() || "0"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-blue-50 p-3">
+              <p className="text-xs text-slate-500">Spent</p>
+              <p className="text-2xl font-bold text-blue-600">
+                ${budget?.spent_amount?.toLocaleString() || "0"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-orange-50 p-3">
+              <p className="text-xs text-slate-500">Remaining</p>
+              <p className="text-2xl font-bold text-orange-500">
+                ${budget?.remaining_amount?.toLocaleString() || "0"}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold text-slate-900">Tasks</h3>
+            <button
+              type="button"
+              onClick={() => openTaskPopup()}
+              className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+            >
+              + Add Task
+            </button>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {tasks.map((task) => (
+              <div
+                key={task.id}
+                className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="text-sm font-medium text-slate-800">
+                    {task.title}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {task.due_date
+                      ? new Date(task.due_date).toLocaleDateString()
+                      : "No due date"}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {task.status || "todo"}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {task.status !== "done" ? (
+                    <button
+                      type="button"
+                      onClick={() => markTaskDone(task)}
+                      className="rounded-lg bg-green-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-green-600"
+                    >
+                      Done
+                    </button>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => openTaskPopup(task)}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => openDeleteTaskPopup(task)}
+                    className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-100"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold text-slate-900">
+              Booked Providers
+            </h3>
+            <Link
+              to="/organizer/providers"
+              className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+            >
+              + Find More
+            </Link>
+          </div>
+
+
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {bookings.map((booking) => {
+              const bookingStatus = formatBookingStatus(booking.status);
+              const providerId = booking.provider?.id;
+              const canViewDetails = Number.isInteger(booking.service?.id);
+
+              return (
+                <div key={booking.id} className="rounded-lg border border-slate-200 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {booking.provider?.name || "Provider"}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {booking.service?.category || booking.service?.title || "Service"}
+                      </p>
+                    </div>
+                    <p className={`text-xs font-medium ${bookingStatus.className}`}>
+                      {bookingStatus.label}
+                    </p>
+                  </div>
+
+                  <p className="mt-3 text-sm font-semibold text-green-600">
+                    {formatBookingPrice(booking)}
+                  </p>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openProviderConversation(
+                          booking.provider?.id,
+
+                        )
+                      }
+                      className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
+                    >
+                      {providerId && savedMessageProviderIds.includes(providerId)
+                        ? "Saved"
+                        : "Message later"}
+                    </button>
+
+                    {canViewDetails ? (
+                      <Link
+                        to={`/organizer/providers/${booking.service?.id}`}
+                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-center text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                      >
+                        View
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        className="rounded-md border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-400"
+                      >
+                        View
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {!loading && bookings.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500">
+              No providers added to this event yet.
+            </p>
+          ) : null}
+        </section>
+
+        {popupType !== "" ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl">
+              <h3 className="text-lg font-semibold text-slate-900">
+                {popupType === "event"
+                  ? "Edit Event"
+                  : popupType === "budget"
+                    ? budget
+                      ? "Edit Budget"
+                      : "Add Budget"
+                    : popupType === "task"
+                      ? selectedTask
+                        ? "Edit Task"
+                        : "Add Task"
+                      : popupType === "deleteTask"
+                        ? "Delete Task"
+                        : "Delete Budget"}
+              </h3>
+
+              {popupType === "event" ? (
+                <form
+                  className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"
+                  onSubmit={saveEvent}
+                >
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Event Name
+                    </label>
+                    <input
+                      name="title"
+                      type="text"
+                      value={eventForm.title}
+                      onChange={handleEventChange}
+                      required
+                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Date
+                    </label>
+                    <input
+                      name="event_date"
+                      type="date"
+                      value={eventForm.event_date}
+                      onChange={handleEventChange}
+                      required
+                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Location
+                    </label>
+                    <input
+                      name="location"
+                      type="text"
+                      value={eventForm.location}
+                      onChange={handleEventChange}
+                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Guests
+                    </label>
+                    <input
+                      name="guests_count"
+                      type="number"
+                      min="0"
+                      value={eventForm.guests_count}
+                      onChange={handleEventChange}
+                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      value={eventForm.status}
+                      onChange={handleEventChange}
+                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    >
+
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Description
+                    </label>
+                    <textarea
+                      name="description"
+                      rows={3}
+                      value={eventForm.description}
+                      onChange={handleEventChange}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 mt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={closePopup}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-70"
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {popupType === "budget" ? (
+                <form
+                  className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2"
+                  onSubmit={saveBudget}
+                >
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Total Amount
+                    </label>
+                    <input
+                      name="total_amount"
+                      type="number"
+                      min="0"
+                      value={budgetForm.total_amount}
+                      onChange={handleBudgetChange}
+                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Spent Amount
+                    </label>
+                    <input
+                      name="spent_amount"
+                      type="number"
+                      min="0"
+                      value={budgetForm.spent_amount}
+                      onChange={handleBudgetChange}
+                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-green-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 mt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={closePopup}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-70"
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {popupType === "task" ? (
+                <form
+                  className="mt-4 grid grid-cols-1 gap-3"
+                  onSubmit={saveTask}
+                >
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Task Title
+                    </label>
+                    <input
+                      name="title"
+                      type="text"
+                      value={taskForm.title}
+                      onChange={handleTaskChange}
+                      required
+                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Due Date
+                    </label>
+                    <input
+                      name="due_date"
+                      type="date"
+                      value={taskForm.due_date}
+                      onChange={handleTaskChange}
+                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      value={taskForm.status}
+                      onChange={handleTaskChange}
+                      className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    >
+                      <option value="todo">To Do</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="done">Done</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-slate-600">
+                      Description
+                    </label>
+                    <textarea
+                      name="description"
+                      rows={3}
+                      value={taskForm.description}
+                      onChange={handleTaskChange}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="mt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={closePopup}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-70"
+                    >
+                      {saving ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
+
+              {popupType === "deleteTask" ? (
+                <div className="mt-4">
+                  <p className="text-sm text-slate-600">
+                    Delete task:{" "}
+                    <span className="font-semibold">{selectedTask?.title}</span>{" "}
+                    ?
+                  </p>
+
+                  <div className="mt-5 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={closePopup}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={deleteTask}
+                      disabled={saving}
+                      className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-70"
+                    >
+                      {saving ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {popupType === "deleteBudget" ? (
+                <div className="mt-4">
+                  <p className="text-sm text-slate-600">
+                    Delete the event budget?
+                  </p>
+
+                  <div className="mt-5 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={closePopup}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={deleteBudget}
+                      disabled={saving}
+                      className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-70"
+                    >
+                      {saving ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </OrganizerLayout>
+  );
 }
