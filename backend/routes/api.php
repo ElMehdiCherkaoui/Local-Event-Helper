@@ -12,11 +12,16 @@ use App\Http\Controllers\Api\ConversationMessageController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\BudgetController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::get('/search/services', [ServiceController::class, 'index']);
+Route::match(['get', 'post'], '/broadcasting/auth', function (Request $request) {
+    return Broadcast::auth($request);
+})->middleware('auth:sanctum');
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/user', [AuthController::class, 'me']);
