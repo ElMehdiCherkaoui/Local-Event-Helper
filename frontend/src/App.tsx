@@ -19,7 +19,6 @@ import OrganizerProfile from './pages/organizer/Profile';
 import ProviderDashboard from './pages/provider/Dashboard';
 import ProviderServices from './pages/provider/Services';
 import ProviderBookings from './pages/provider/Bookings';
-import ProviderReviews from './pages/provider/Reviews';
 import ProviderAvailability from './pages/provider/Availability';
 import ProviderMessages from './pages/provider/Messages';
 import ProviderProfile from './pages/provider/Profile';
@@ -81,7 +80,6 @@ export default function App() {
 				<Route path='/provider/dashboard' element={<ProviderDashboard />} />
 				<Route path='/provider/services' element={<ProviderServices />} />
 				<Route path='/provider/bookings' element={<ProviderBookings />} />
-				<Route path='/provider/reviews' element={<ProviderReviews />} />
 				<Route path='/provider/availability' element={<ProviderAvailability />} />
 				<Route path='/provider/messages' element={<ProviderMessages />} />
 				<Route path='/provider/profile' element={<ProviderProfile />} />
