@@ -46,6 +46,15 @@ export default function Login() {
 
     try {
       const user = JSON.parse(userText);
+
+      if (user?.is_banned) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setError("Your account is banned.");
+        navigate("/", { replace: true });
+        return;
+      }
+
       const destination = dashboardByRole(getRoleId(user));
 
       if (destination) {
@@ -80,6 +89,13 @@ export default function Login() {
         return;
       }
 
+      if (data.user.is_banned) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setError("Your account is banned.");
+        return;
+      }
+
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
@@ -100,6 +116,23 @@ export default function Login() {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
     } catch (err: any) {
+      const backendMessage = err?.response?.data?.message;
+
+      if (
+        err?.response?.status === 403 ||
+        (typeof backendMessage === "string" && backendMessage.toLowerCase().includes("banned"))
+      ) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setError("Your account is banned.");
+        return;
+      }
+
+      if (err?.response?.status === 422) {
+        setError("password or email is incorrect");
+        return;
+      }
+
       setError("Server error. Please try again.");
     } finally {
       setLoading(false);
