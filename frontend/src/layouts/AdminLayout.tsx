@@ -18,7 +18,6 @@ export default function AdminLayout({
 	title,
 	subtitle,
 }: AdminLayoutProps) {
-	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 	const location = useLocation();
 	const navigate = useNavigate();
 
@@ -40,8 +39,7 @@ export default function AdminLayout({
 		
 	}
 
-	const closeSidebar = () => setIsSidebarOpen(false);
-	const openSidebar = () => setIsSidebarOpen(true);
+
 
 	const isActive = (path: string) => location.pathname === path;
 
@@ -70,18 +68,17 @@ export default function AdminLayout({
 		<div className="bg-[#2f2f2f] font-sans min-h-screen w-full">
 			<div className="flex min-h-screen w-full overflow-hidden bg-[#0F172A]">
 				<aside
-					className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#020617] text-white transition-transform duration-300 md:static ${isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-						}`}
+					className="fixed inset-y-0 left-0 z-50 w-64 bg-[#020617] text-white inline-flex flex-col lg:static"
+						
 				>
 					<div className="flex h-full flex-col">
 						<div className=" border-white/10 px-6 py-5">
-							<h1 className="text-xl text-center font-bold">LEH Admin</h1>
+							<h1 className="text-xl text-center font-bold">LEH Admin</h1>	
 						</div>
 
 						<nav className="flex-1 space-y-2 px-4 py-5 text-sm">
 							<Link
 								to="/admin/dashboard"
-								onClick={closeSidebar}
 								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold transition-colors ${isActive("/admin/dashboard")
 									? "bg-blue-500 text-white"
 									: "text-gray-300 hover:bg-white/5"
@@ -93,7 +90,6 @@ export default function AdminLayout({
 
 							<Link
 								to="/admin/users"
-								onClick={closeSidebar}
 								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold transition-colors ${isActive("/admin/users")
 									? "bg-blue-500 text-white"
 									: "text-gray-300 hover:bg-white/5"
@@ -105,7 +101,6 @@ export default function AdminLayout({
 
 							<Link
 								to="/admin/events"
-								onClick={closeSidebar}
 								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold  transition-colors ${isActive("/admin/events")
 									? "bg-blue-500 text-white"
 									: "text-gray-300 hover:bg-white/5"
@@ -117,7 +112,6 @@ export default function AdminLayout({
 
 							<Link
 								to="/admin/moderation"
-								onClick={closeSidebar}
 								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold  transition-colors ${isActive("/admin/moderation")
 									? "bg-blue-500 text-white"
 									: "text-gray-300 hover:bg-white/5"
@@ -129,8 +123,7 @@ export default function AdminLayout({
 
 							<Link
 								to="/admin/logs"
-								onClick={closeSidebar}
-								className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold  transition-colors ${isActive("/admin/logs")
+									className={`flex items-center gap-3 rounded-md px-4 py-3 font-semibold  transition-colors ${isActive("/admin/logs")
 									? "bg-blue-500 text-white"
 									: "text-gray-300 hover:bg-white/5"
 									}`}
@@ -164,23 +157,12 @@ export default function AdminLayout({
 					</div>
 				</aside>
 
-				{isSidebarOpen && (
-					<div
-						onClick={closeSidebar}
-						className="fixed inset-0 z-40 bg-black/50 md:hidden"
-					/>
-				)}
+
 
 				<div className="flex-1">
 					<header className="flex items-center justify-between bg-[#1E293B] px-4 py-4 md:px-6">
 						<div className="flex items-center gap-3">
-							<button
-								type="button"
-								onClick={openSidebar}
-								className="text-white md:hidden"
-							>
-								☰
-							</button>
+			
 							<div>
 								<h2 className="text-xl font-semibold text-white">{title}</h2>
 								<p className="text-[1em] text-gray-400">{subtitle}</p>
