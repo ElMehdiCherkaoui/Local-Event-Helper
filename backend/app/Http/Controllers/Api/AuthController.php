@@ -68,6 +68,12 @@ class AuthController extends Controller
             ], 422);
         }
 
+        if ($user->is_banned) {
+            return response()->json([
+                'message' => 'Your account is banned.',
+            ], 403);
+        }
+
         $user->loadMissing('role');
 
         $token = $user->createToken('api')->plainTextToken;
