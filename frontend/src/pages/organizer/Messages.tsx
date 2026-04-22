@@ -1,220 +1,362 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
 import OrganizerLayout from '../../layouts/OrganizerLayout';
+import { getEcho } from '../../lib/echo';
 
-// Rookie-level data model: each conversation stores its own messages.
-const chatList = [
-	{
-		id: 1,
-		name: 'John Photography',
-		role: 'Photographer',
-		preview: "Hi! I'm interested in your wedding...",
-		timeAgo: '2h',
-		avatarColor: 'bg-blue-500',
-		avatarLetter: 'J',
-		rating: '★ 4.8',
-		messages: [
-			{
-				id: 1,
-				text: "Hi! I saw you're planning a wedding in Marrakech. I'm interested in being your photographer!",
-				time: '10:30 AM',
-				fromMe: false,
-			},
-			{
-				id: 2,
-				text: "Your work looks amazing! What's your availability for June 15th?",
-				time: '10:45 AM',
-				fromMe: true,
-			},
-			{
-				id: 3,
-				text: "I'm available! 8 hours coverage, edited photos, and a complimentary engagement session. $800.",
-				time: '11:02 AM',
-				fromMe: false,
-			},
-		],
-	},
-	{
-		id: 2,
-		name: 'Sarah Catering',
-		role: 'Caterer',
-		preview: "I've prepared a menu proposal...",
-		timeAgo: '5h',
-		avatarColor: 'bg-pink-500',
-		avatarLetter: 'S',
-		rating: '★ 4.9',
-		messages: [
-			{
-				id: 1,
-				text: 'I prepared a menu proposal for your event. Want me to share the details?',
-				time: '09:15 AM',
-				fromMe: false,
-			},
-		],
-	},
-	{
-		id: 3,
-		name: 'DJ Mike',
-		role: 'DJ',
-		preview: 'Thanks for booking! Looking forward... ',
-		timeAgo: '1d',
-		avatarColor: 'bg-violet-500',
-		avatarLetter: 'M',
-		rating: '★ 4.7',
-		messages: [
-			{
-				id: 1,
-				text: 'Thanks for booking. I can start preparing your custom playlist.',
-				time: 'Yesterday',
-				fromMe: false,
-			},
-		],
-	},
-	{
-		id: 4,
-		name: 'Elegant Decor',
-		role: 'Decorator',
-		preview: 'We can provide custom decorations...',
-		timeAgo: '2d',
-		avatarColor: 'bg-emerald-500',
-		avatarLetter: 'E',
-		rating: '★ 5.0',
-		messages: [
-			{
-				id: 1,
-				text: 'We can prepare custom decoration packages based on your budget.',
-				time: '2d ago',
-				fromMe: false,
-			},
-		],
-	},
-	{
-		id: 5,
-		name: 'Vision Films',
-		role: 'Videographer',
-		preview: "Here's our portfolio and pricing...",
-		timeAgo: '3d',
-		avatarColor: 'bg-orange-500',
-		avatarLetter: 'V',
-		rating: '★ 4.9',
-		messages: [
-			{
-				id: 1,
-				text: 'Here is our latest portfolio and simple package pricing.',
-				time: '3d ago',
-				fromMe: false,
-			},
-		],
-	},
-];
+type ApiUser = {
+    id?: number | null;
+    name?: string | null;
+    business_name?: string | null;
+};
 
-export default function Messages() {
-	
-	const [selectedChatId, setSelectedChatId] = useState(1);
+type ApiMessage = {
+    id: number;
+    sender_id?: number | null;
+    content?: string | null;
+    sent_at?: string | null;
+    sender?: ApiUser | null;
+};
 
-	const [showThreadOnSmall, setShowThreadOnSmall] = useState(false);
+type ApiConversation = {
+    id: number;
+    organizer_id?: number | null;
+    provider_id?: number | null;
+    last_message_at?: string | null;
+    organizer?: ApiUser | null;
+    provider?: ApiUser | null;
+    messages?: ApiMessage[];
+};
 
-	const selectedChat = chatList.find((chat) => chat.id === selectedChatId) || chatList[0];
+type BroadcastMessage = ApiMessage & {
+    conversation_id?: number | null;
+};
 
-	const openConversation = (chatId: number) => {
-		setSelectedChatId(chatId);
-		setShowThreadOnSmall(true);
-	};
+const avatarColors = ['bg-blue-500', 'bg-pink-500', 'bg-violet-500', 'bg-emerald-500', 'bg-orange-500'];
 
-	const backToList = () => {
-		setShowThreadOnSmall(false);
-	};
+function getConversationPartner(conversation: ApiConversation | null) {
+    return conversation?.provider || null;
+}
 
+function getDisplayName(user: ApiUser | null) {
+    return user?.name || user?.business_name || 'User';
+}
+
+function getBusinessName(user: ApiUser | null) {
+    return user?.business_name || '';
+}
+
+export default function ProviderMessages() {
+    const [conversations, setConversations] = useState<ApiConversation[]>([]);
+    const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
+    const [selectedMessages, setSelectedMessages] = useState<ApiMessage[]>([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [showThreadOnSmall, setShowThreadOnSmall] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [loadingMessages, setLoadingMessages] = useState(false);
+    const [sendingMessage, setSendingMessage] = useState(false);
+    const [error, setError] = useState('');
+    const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+
+    let currentUserId: number | null = null;
+    try {
+        const userText = localStorage.getItem('user');
+        if (userText) {
+            const user = JSON.parse(userText);
+            const id = Number(user?.id);
+            currentUserId = Number.isNaN(id) ? null : id;
+        }
+    } catch {
+        currentUserId = null;
+    }
+
+    useEffect(() => {
+        const loadConversations = async () => {
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await axios.get(`http://127.0.0.1:8000/api/conversations`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                const list = (response.data?.conversations ?? []) as ApiConversation[];
+                setConversations(list);
+
+                const params = new URLSearchParams(window.location.search);
+                const id = Number(params.get('conversationId'));
+
+                setSelectedChatId(id);
+            } catch {
+                setError('Failed to load conversations.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadConversations();
+    }, []);
+
+    useEffect(() => {
+        const loadMessages = async () => {
+            const token = localStorage.getItem('token');
+
+            setLoadingMessages(true);
+
+            try {
+                const response = await axios.get(`http://127.0.0.1:8000/api/conversations/${selectedChatId}/messages`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                const list = (response.data?.messages ?? []) as ApiMessage[];
+                setSelectedMessages(list.slice().sort((a, b) => a.id - b.id));
+            } catch {
+                setSelectedMessages([]);
+                setError('Failed to load conversation messages.');
+            } finally {
+                setLoadingMessages(false);
+            }
+        };
+
+        loadMessages();
+    }, [selectedChatId]);
+
+    useEffect(() => {
+
+        let echo: ReturnType<typeof getEcho> | null = null;
+        const channelName = `conversation.${selectedChatId}`;
+        if (!selectedChatId) {
+            return;
+        }
+
+        const onMessage = (message: BroadcastMessage) => {
+
+            setSelectedMessages((current) => {
+                if (current.some((item) => item.id === message.id)) {
+                    return current;
+                }
+                return [...current, message];
+            });
+
+            setConversations((current) =>
+                current.map((conversation) => {
+                    if (conversation.id !== selectedChatId) {
+                        return conversation;
+                    }
+
+                    const oldMessages = conversation.messages ?? [];
+                    const hasMessage = oldMessages.some((item) => item.id === message.id);
+
+                    return {
+                        ...conversation,
+                        last_message_at: message.sent_at || new Date().toISOString(),
+                        messages: hasMessage ? oldMessages : [...oldMessages, message],
+                    };
+                }),
+            );
+        };
+
+        try {
+            echo = getEcho();
+            echo.private(channelName).listen('.message.sent', onMessage);
+        } catch {
+            setError('Realtime connection failed. You can still send messages.');
+        }
+
+        return () => {
+            if (!echo) {
+                return;
+            }
+
+            echo.private(channelName).stopListening('.message.sent');
+            echo.leave(channelName);
+        };
+    }, [selectedChatId]);
+
+    useEffect(() => {
+        if (!messagesContainerRef.current) {
+            return;
+        }
+
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }, [selectedChatId, selectedMessages]);
+
+    const selectedChat = conversations.find((item) => item.id === selectedChatId) || null;
+    const selectedChatUser = getConversationPartner(selectedChat);
+    const selectedChatName = getDisplayName(selectedChatUser);
+    const selectedChatBusiness = getBusinessName(selectedChatUser);
+
+    const sendMessage = async () => {
+        const token = localStorage.getItem('token');
+        const content = newMessage.trim();
+
+
+        setSendingMessage(true);
+        setError('');
+
+        try {
+            const response = await axios.post(
+                `http://127.0.0.1:8000/api/conversations/${selectedChatId}/messages`,
+                { content },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                },
+            );
+
+            const createdMessage = response.data?.data as ApiMessage | undefined;
+            if (createdMessage) {
+                setSelectedMessages((current) => {
+                    if (current.some((item) => item.id === createdMessage.id)) {
+                        return current;
+                    }
+                    return [...current, createdMessage];
+                });
+
+                setConversations((current) =>
+                    current.map((conversation) => {
+                        if (conversation.id !== selectedChatId) {
+                            return conversation;
+                        }
+
+                        const oldMessages = conversation.messages ?? [];
+                        const hasMessage = oldMessages.some((item) => item.id === createdMessage.id);
+
+                        return {
+                            ...conversation,
+                            last_message_at: createdMessage.sent_at || new Date().toISOString(),
+                            messages: hasMessage ? oldMessages : [...oldMessages, createdMessage],
+                        };
+                    }),
+                );
+            }
+
+            setNewMessage('');
+        } catch {
+            setError('Failed to send message.');
+        } finally {
+            setSendingMessage(false);
+        }
+    };
 	return (
 		<OrganizerLayout title='Messages' subtitle='Chat with service providers'>
-			<div className='grid grid-cols-1 gap-3 lg:grid-cols-[280px_1fr]'>
-				<section className={`rounded-2xl border border-slate-200 bg-white ${showThreadOnSmall ? 'hidden lg:block' : 'block'}`}>
-					{chatList.map((chat) => (
-						<button
-							key={chat.id}
-							type='button'
-							onClick={() => openConversation(chat.id)}
-							className={`flex w-full items-start gap-3 border-b border-slate-100 px-3 py-3 text-left transition hover:bg-slate-50 ${selectedChatId === chat.id ? 'bg-blue-50/40' : ''}`}
-						>
-							<div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white ${chat.avatarColor}`}>
-								{chat.avatarLetter}
-							</div>
-							<div className='min-w-0 flex-1'>
-								<div className='flex items-center justify-between gap-2'>
-									<p className='truncate text-sm font-semibold text-slate-800'>{chat.name}</p>
-									<span className='text-xs text-slate-400'>{chat.timeAgo}</span>
-								</div>
-								<p className='mt-0.5 truncate text-xs text-slate-500'>{chat.preview}</p>
-							</div>
-						</button>
-					))}
-				</section>
+			 <div className='space-y-3'>
+                {loading ? <p className='text-sm text-slate-500'>Loading conversations...</p> : null}
+                {error ? <p className='text-sm text-red-500'>{error}</p> : null}
 
-				<section className={`rounded-2xl border border-slate-200 bg-white ${showThreadOnSmall ? 'block' : 'hidden lg:block'}`}>
-					<div className='border-b border-slate-100 px-3 py-3'>
-						<div className='flex items-center justify-between gap-2'>
-							<div className='flex items-center gap-2'>
-								<button
-									type='button'
-									onClick={backToList}
-									className='rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 lg:hidden'
-								>
-									←
-								</button>
-								<div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white ${selectedChat.avatarColor}`}>
-									{selectedChat.avatarLetter}
-								</div>
-								<div>
-									<p className='text-sm font-semibold text-slate-800'>{selectedChat.name}</p>
-									<p className='text-xs text-slate-500'>
-										{selectedChat.role} • {selectedChat.rating}
-									</p>
-								</div>
-							</div>
-							<div className='hidden gap-2 sm:flex'>
-								<button type='button' className='rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white'>
-									Profile
-								</button>
-								<button type='button' className='rounded-md bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700'>
-									Details
-								</button>
-							</div>
-						</div>
-					</div>
+                <div className='grid grid-cols-1 gap-3 lg:grid-cols-[300px_1fr]'>
+                    <section className={`max-h-[75vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white ${showThreadOnSmall ? 'hidden lg:block' : 'block'}`}>
+                        {conversations.map((chat, index) => {
+                            const chatUser = getConversationPartner(chat);
+                            const chatName = getDisplayName(chatUser);
+                            const chatBusiness = getBusinessName(chatUser);
+                            const avatarLetter = chatName.charAt(0).toUpperCase() || 'U';
 
-					<div className='min-h-85 space-y-3 px-3 py-3 sm:min-h-105'>
-						{selectedChat.messages.map((message) => (
-							<div key={message.id} className={`flex ${message.fromMe ? 'justify-end' : 'justify-start'}`}>
-								<div>
-									<p
-										className={`max-w-60 rounded-xl px-3 py-2 text-xs sm:max-w-80 sm:text-sm ${message.fromMe ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}
-									>
-										{message.text}
-									</p>
-									<p className={`mt-1 text-[10px] text-slate-400 ${message.fromMe ? 'text-right' : 'text-left'}`}>
-										{message.time}
-									</p>
-								</div>
-							</div>
-						))}
-					</div>
+                            return (
+                                <button
+                                    key={chat.id}
+                                    type='button'
+                                    onClick={() => {
+                                        setSelectedChatId(chat.id);
+                                        setShowThreadOnSmall(true);
+                                    }}
+                                    className={`flex w-full items-start gap-3 border-b border-slate-100 px-3 py-3 text-left hover:bg-slate-50 ${selectedChatId === chat.id ? 'bg-violet-50/30' : ''}`}
+                                >
+                                    <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white ${avatarColors[index % avatarColors.length]}`}>
+                                        {avatarLetter}
+                                    </div>
+                                    <div className='min-w-0'>
+                                        <p className='truncate text-sm font-semibold text-slate-800'>{chatName}</p>
+                                        {chatBusiness ? <p className='truncate text-xs text-slate-500'>{chatBusiness}</p> : null}
+                                    </div>
+                                </button>
+                            );
+                        })}
 
-					<div className='border-t border-slate-100 p-3'>
-						<div className='grid grid-cols-[1fr_auto] gap-2'>
-							<input
-								type='text'
-								placeholder='Type your message...'
-								className='h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 outline-none'
-							/>
-							<button
-								type='button'
-								className='h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700'
-							>
-								Send
-							</button>
-						</div>
-					</div>
-				</section>
-			</div>
+                        {!loading && conversations.length === 0 ? (
+                            <p className='px-3 py-4 text-sm text-slate-500'>No conversations yet.</p>
+                        ) : null}
+                    </section>
+
+                    <section className={`max-h-[75vh] overflow-hidden rounded-2xl border border-slate-200 bg-white ${showThreadOnSmall ? 'flex flex-col' : 'hidden lg:flex lg:flex-col'}`}>
+                        {selectedChat ? (
+                            <>
+                                <div className='border-b border-slate-100 px-3 py-3'>
+                                    <div className='flex items-center justify-between gap-2'>
+                                        <div className='flex items-center gap-2'>
+                                            <div className='flex h-8 w-8 items-center justify-center rounded-full bg-violet-500 text-xs font-semibold text-white'>
+                                                {selectedChatName.charAt(0).toUpperCase() || 'U'}
+                                            </div>
+                                            <div>
+                                                <p className='text-sm font-semibold text-slate-800'>{selectedChatName}</p>
+                                                {selectedChatBusiness ? <p className='text-xs text-slate-500'>{selectedChatBusiness}</p> : null}
+                                            </div>
+                                        </div>
+                                        <button
+                                            type='button'
+                                            onClick={() => setShowThreadOnSmall(false)}
+                                            className='rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 lg:hidden'
+                                        >
+                                            {'<-'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div ref={messagesContainerRef} className='min-h-85 flex-1 space-y-2 overflow-y-auto px-3 py-3 sm:min-h-105'>
+                                    {loadingMessages ? <p className='text-sm text-slate-500'>Loading messages...</p> : null}
+
+                                    {selectedMessages.map((message) => {
+                                        const fromMe = currentUserId !== null && message.sender_id === currentUserId;
+
+                                        return (
+                                            <div key={message.id} className={`flex ${fromMe ? 'justify-end' : 'justify-start'}`}>
+                                                <p className={`max-w-60 rounded-xl px-3 py-2 text-xs sm:max-w-80 sm:text-sm ${fromMe ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                                    {message.content || ''}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {!loadingMessages && selectedMessages.length === 0 ? (
+                                        <p className='text-sm text-slate-500'>No messages in this conversation yet.</p>
+                                    ) : null}
+                                </div>
+
+                                <div className='border-t border-slate-100 p-3'>
+                                    <form
+                                        onSubmit={(event) => {
+                                            event.preventDefault();
+                                            sendMessage();
+                                        }}
+                                        className='grid grid-cols-[1fr_auto] gap-2'
+                                    >
+                                        <input
+                                            type='text'
+                                            placeholder='type message'
+                                            value={newMessage}
+                                            onChange={(event) => setNewMessage(event.target.value)}
+                                            disabled={sendingMessage || loadingMessages}
+                                            className='h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-violet-500'
+                                        />
+                                        <button
+                                            type='submit'
+                                            disabled={sendingMessage || loadingMessages || newMessage.trim().length === 0}
+                                            className='h-10 rounded-lg bg-violet-600 px-4 text-sm font-semibold text-white disabled:opacity-60'
+                                        >
+                                            {sendingMessage ? 'Sending...' : 'Send'}
+                                        </button>
+                                    </form>
+                                </div>
+                            </>
+                        ) : (
+                            <div className='px-3 py-4 text-sm text-slate-500'>Select a conversation to view messages.</div>
+                        )}
+                    </section>
+                </div>
+            </div>
 		</OrganizerLayout>
 	);
 }
