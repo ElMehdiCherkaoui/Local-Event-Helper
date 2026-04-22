@@ -21,9 +21,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/search/services', [ServiceController::class, 'index']);
 Route::match(['get', 'post'], '/broadcasting/auth', function (Request $request) {
     return Broadcast::auth($request);
-})->middleware('auth:sanctum');
+})->middleware(['auth:sanctum', 'not_banned']);
 
-Route::middleware('auth:sanctum')->group(function (): void {
+Route::middleware(['auth:sanctum', 'not_banned'])->group(function (): void {
     Route::get('/user', [AuthController::class, 'me']);
     Route::patch('/profile', [AuthController::class, 'updateProfile']);
     Route::post('/logout', [AuthController::class, 'logout']);
