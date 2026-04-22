@@ -1,5 +1,11 @@
 import type { ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import ProviderIconDashboard from '../assets/icons/IconProviderAvailability.svg';
+import ProviderIconServices from '../assets/icons/IconProviderServices.svg';
+import ProviderIconBookings from '../assets/icons/IconProviderBooking.svg';
+import ProviderIconAvailability from '../assets/icons/IconProviderAvailability.svg';
+import ProviderIconMessages from '../assets/icons/IconProviderMessages.svg';
+import ProviderIconProfile from '../assets/icons/IconProviderProfile.svg';
 
 type ProviderLayoutProps = {
 	children: ReactNode;
@@ -11,16 +17,17 @@ type NavItem = {
 	label: string;
 	path: string;
 	mobileLabel: string;
+	icon?: string;
 };
 
 const navItems: NavItem[] = [
-	{ label: 'Dashboard', path: '/provider/dashboard', mobileLabel: 'Home' },
-	{ label: 'My Services', path: '/provider/services', mobileLabel: 'Services' },
-	{ label: 'Booking Requests', path: '/provider/bookings', mobileLabel: 'Bookings' },
-	{ label: 'Availability', path: '/provider/availability', mobileLabel: 'Availability' },
-	{ label: 'Messages', path: '/provider/messages', mobileLabel: 'Messages' },
-	{ label: 'My Profile', path: '/provider/profile', mobileLabel: 'Profile' },
-];
+	{ label: 'Dashboard', path: '/provider/dashboard', mobileLabel: 'Home', icon: ProviderIconDashboard },
+	{ label: 'My Services', path: '/provider/services', mobileLabel: 'Services', icon: ProviderIconServices },
+	{ label: 'Booking Requests', path: '/provider/bookings', mobileLabel: 'Bookings', icon: ProviderIconBookings },
+	{ label: 'Availability', path: '/provider/availability', mobileLabel: 'Availability', icon: ProviderIconAvailability },
+	{ label: 'Messages', path: '/provider/messages', mobileLabel: 'Messages', icon: ProviderIconMessages },
+	{ label: 'My Profile', path: '/provider/profile', mobileLabel: 'Profile', icon: ProviderIconProfile },
+];	
 
 export default function ProviderLayout({ children, title, subtitle }: ProviderLayoutProps) {
 	const location = useLocation();
@@ -88,7 +95,7 @@ export default function ProviderLayout({ children, title, subtitle }: ProviderLa
 											: 'text-purple-100/80 hover:bg-white/10'
 									}`}
 								>
-									<span className='inline-block h-1.5 w-1.5 rounded-full bg-current' />
+									{item.icon && <img src={item.icon} alt={item.label} className='h-5 w-5' />}
 									<span>{item.label}</span>
 								</Link>
 							))}
@@ -124,7 +131,7 @@ export default function ProviderLayout({ children, title, subtitle }: ProviderLa
 						</div>
 					</header>
 
-					<main className='px-4 py-4 pb-24 sm:px-5 lg:px-6 lg:py-5 lg:pb-6 bg-[#F3F4F6]'>{children}</main>
+					<main className='px-4 py-4 pb-24 sm:px-5 lg:px-6 lg:py-5 lg:pb-6'>{children}</main>
 				</div>
 			</div>
 
@@ -138,7 +145,7 @@ export default function ProviderLayout({ children, title, subtitle }: ProviderLa
 								isActive(item.path) ? 'text-[#8B5CF6]' : 'text-purple-100/70'
 							}`}
 						>
-							<span className='inline-block h-1.5 w-1.5 rounded-full bg-current' />
+							<img src={item.icon} alt={item.label} className='h-5 w-5' />
 							<span>{item.mobileLabel}</span>
 						</Link>
 					))}
