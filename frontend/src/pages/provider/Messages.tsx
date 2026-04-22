@@ -114,7 +114,7 @@ export default function ProviderMessages() {
                 setSelectedMessages(list.slice().sort((a, b) => a.id - b.id));
             } catch {
                 setSelectedMessages([]);
-                setError('Failed to load conversation messages.');
+         
             } finally {
                 setLoadingMessages(false);
             }
