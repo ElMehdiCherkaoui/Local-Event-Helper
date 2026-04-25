@@ -1,28 +1,6 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState} from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-
-function getRoleId(user: any) {
-  const rawRoleId = user?.role_id ?? user?.role?.id;
-  const roleId = Number(rawRoleId);
-  return Number.isNaN(roleId) ? null : roleId;
-}
-
-function dashboardByRole(roleId: number | null) {
-  if (roleId === 1) {
-    return "/admin/dashboard";
-  }
-
-  if (roleId === 2) {
-    return "/organizer/dashboard";
-  }
-
-  if (roleId === 3) {
-    return "/provider/dashboard";
-  }
-
-  return null;
-}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -35,6 +13,16 @@ export default function Login() {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const getDashboardPath = (user: any) => {
+    const roleName = user?.role?.name;
+
+    if (roleName === "admin") return "/admin/dashboard";
+    if (roleName === "organizer") return "/organizer/dashboard";
+    if (roleName === "provider") return "/provider/dashboard";
+
+    return null;
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -55,10 +43,10 @@ export default function Login() {
         return;
       }
 
-      const destination = dashboardByRole(getRoleId(user));
+      const path = getDashboardPath(user);
 
-      if (destination) {
-        navigate(destination);
+      if (path) {
+        navigate(path, { replace: true });
       }
     } catch {
       localStorage.removeItem("token");
@@ -66,12 +54,8 @@ export default function Login() {
     }
   }, [navigate]);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async () => {
 
-    if (loading) {
-      return;
-    }
 
     setLoading(true);
     setError("");
@@ -99,39 +83,20 @@ export default function Login() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      if (remember) {
-        localStorage.setItem("rememberEmail", email);
-      } else {
-        localStorage.removeItem("rememberEmail");
-      }
+      const path = getDashboardPath(data.user);
 
-      const roleId = (data.user.role_id ?? data.user.role?.id) as number;
-      const destination = dashboardByRole(roleId);
-
-      if (destination) {
-        navigate(destination, { replace: true });
+      if (path) {
+        navigate(path, { replace: true });
         return;
       }
-
-      localStorage.removeItem("token");
+      else{
+              localStorage.removeItem("token");
       localStorage.removeItem("user");
+        return;
+      }
+
+
     } catch (err: any) {
-      const backendMessage = err?.response?.data?.message;
-
-      if (
-        err?.response?.status === 403 ||
-        (typeof backendMessage === "string" && backendMessage.toLowerCase().includes("banned"))
-      ) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setError("Your account is banned.");
-        return;
-      }
-
-      if (err?.response?.status === 422) {
-        setError("password or email is incorrect");
-        return;
-      }
 
       setError("Server error. Please try again.");
     } finally {
@@ -153,7 +118,9 @@ export default function Login() {
               Login to Your Account
             </h2>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-4" onSubmit={(e)=>{
+              e.preventDefault();handleSubmit();
+            }}>
               <div>
                 <label
                   htmlFor="email"
