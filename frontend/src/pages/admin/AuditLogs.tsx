@@ -21,17 +21,6 @@ type AuditLog = {
 	};
 };
 
-function formatDate(value?: string) {
-	if (!value) {
-		return '-';
-	}
-
-	return new Date(value).toLocaleString();
-}
-
-function getTarget(log: AuditLog) {
-	return log.subject?.name || log.subject?.title || log.properties?.user_email || '-';
-}
 
 export default function AuditLogs() {
 	const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -85,7 +74,7 @@ export default function AuditLogs() {
 					<div className="hidden md:block">
 						{logs.map((log) => (
 							<div key={log.id} className="grid grid-cols-5 items-center border-b border-white/10 px-5 py-4 text-sm text-white last:border-b-0">
-								<div className="text-gray-300">{formatDate(log.created_at)}</div>
+								<div className="text-gray-300">{new Date(log.created_at??'').toLocaleString()}</div>
 								<div>
 									<p className="font-medium text-white">{log.causer?.name || 'System'}</p>
 									<p className="text-xs text-gray-400">{log.causer?.email || '-'}</p>
@@ -95,7 +84,7 @@ export default function AuditLogs() {
 										{log.description}
 									</span>
 								</div>
-								<div className="font-medium text-gray-100">{getTarget(log)}</div>
+								<div className="font-medium text-gray-100">{log.subject?.name || log.subject?.title || log.properties?.user_email || '-'}</div>
 								<div className="text-gray-400">{log.properties?.action || log.event || '-'}</div>
 							</div>
 						))}
@@ -117,11 +106,11 @@ export default function AuditLogs() {
 								<div className="space-y-2 text-xs">
 									<div className="flex justify-between gap-3">
 										<span className="text-gray-400">Time:</span>
-										<span className="text-right text-white">{formatDate(log.created_at)}</span>
+										<span className="text-right text-white">{new Date(log.created_at??'').toLocaleString()}</span>
 									</div>
 									<div className="flex justify-between gap-3">
 										<span className="text-gray-400">Target:</span>
-										<span className="text-right text-white">{getTarget(log)}</span>
+										<span className="text-right text-white">{log.subject?.name || log.subject?.title || log.properties?.user_email || '-'}</span>
 									</div>
 									<div className="flex justify-between gap-3">
 										<span className="text-gray-400">Details:</span>
