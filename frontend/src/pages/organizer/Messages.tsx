@@ -38,7 +38,7 @@ function getConversationPartner(conversation: ApiConversation | null) {
 }
 
 function getDisplayName(user: ApiUser | null) {
-    return user?.name || user?.business_name || 'User';
+    return user?.name || 'Unknown User';
 }
 
 function getBusinessName(user: ApiUser | null) {
@@ -83,10 +83,7 @@ export default function ProviderMessages() {
                 const list = (response.data?.conversations ?? []) as ApiConversation[];
                 setConversations(list);
 
-                const params = new URLSearchParams(window.location.search);
-                const id = Number(params.get('conversationId'));
 
-                setSelectedChatId(id);
             } catch {
                 setError('Failed to load conversations.');
             } finally {
