@@ -14,18 +14,6 @@ type AdminUser = {
 	created_at?: string;
 };
 
-const roleLabel = (roleName?: string) => {
-	if (roleName === 'provider') {
-		return 'Provider';
-	}
-
-	if (roleName === 'admin') {
-		return 'Admin';
-	}
-
-	return 'Organizer';
-};
-
 const colorForRole = (roleName?: string) => {
 	if (roleName === 'provider') {
 		return 'bg-purple-500';
@@ -38,15 +26,6 @@ const colorForRole = (roleName?: string) => {
 	return 'bg-green-500';
 };
 
-const avatarForName = (name: string) => name.charAt(0).toUpperCase();
-
-const formatDate = (value?: string) => {
-	if (!value) {
-		return '-';
-	}
-
-	return new Date(value).toLocaleDateString();
-};
 
 export default function Users() {
 	const [users, setUsers] = useState<AdminUser[]>([]);
@@ -123,7 +102,7 @@ export default function Users() {
 	};
 
 	const filteredUsers = users.filter((user) => {
-		const typeValue = roleLabel(user.role?.name);
+		const typeValue = user.role?.name;
 		const statusValue = user.is_banned ? 'Banned' : 'Active';
 		const locationValue = user.city;
 
@@ -243,7 +222,7 @@ export default function Users() {
 								<div
 									className={`flex h-8 w-8 items-center justify-center rounded-full ${colorForRole(user.role?.name)} text-xs font-bold`}
 								>
-									{avatarForName(user.name)}
+									{user.name.charAt(0).toUpperCase()}
 								</div>
 								<div>
 									<p className="font-medium">{user.name}</p>
@@ -253,14 +232,14 @@ export default function Users() {
 
 							<div className="col-span-1">
 								<span
-									className={`rounded px-2 py-1 text-[10px] ${roleLabel(user.role?.name) === "Organizer"
+									className={`rounded px-2 py-1 text-[10px] ${user.role?.name === "organizer"
 											? "bg-blue-500/20 text-blue-300"
-											: roleLabel(user.role?.name) === "Provider"
+											: user.role?.name === "provider"
 											? "bg-purple-500/20 text-purple-300"
 											: "bg-gray-500/20 text-gray-300"
 										}`}
 								>
-									{roleLabel(user.role?.name)}
+									{user.role?.name}
 								</span>
 							</div>
 
@@ -269,12 +248,12 @@ export default function Users() {
 							</div>
 
 							<div className="col-span-2 text-sm text-gray-300">
-								{formatDate(user.created_at)}
+								{new Date(user.created_at??'').toLocaleDateString()}
 							</div>
 
 							<div className="col-span-1">
 								<span
-									className={`rounded px-2 py-1 text-[10px] ${!user.is_banned
+									className={`rounded px-2 py-1 text-[10px] ${!user	.is_banned
 											? "bg-green-500/20 text-green-300"
 											: "bg-red-500/20 text-red-300"
 										}`}
@@ -308,7 +287,7 @@ export default function Users() {
 									<div
 										className={`flex h-9 w-9 items-center justify-center rounded-full ${colorForRole(user.role?.name)} text-xs font-bold text-white`}
 									>
-										{avatarForName(user.name)}
+										{user.name.charAt(0).toUpperCase()}
 									</div>
 									<div>
 										<p className="font-medium text-white">{user.name}</p>
@@ -328,11 +307,11 @@ export default function Users() {
 							<div className="grid grid-cols-2 gap-3 text-xs">
 								<div>
 									<p className="text-gray-400">Type</p>
-									<p className="text-white">{roleLabel(user.role?.name)}</p>
+									<p className="text-white">{user.role?.name}</p>
 								</div>
 								<div>
 									<p className="text-gray-400">Joined</p>
-									<p className="text-white">{formatDate(user.created_at)}</p>
+									<p className="text-white">{new Date(user.created_at??'').toLocaleDateString()}</p>
 								</div>
 								<div>
 									<p className="text-gray-400">Location</p>
