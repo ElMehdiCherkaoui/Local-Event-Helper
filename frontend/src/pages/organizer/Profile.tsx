@@ -72,12 +72,6 @@ export default function Profile() {
 		const loadProfile = async () => {
 			const token = localStorage.getItem('token');
 
-			if (!token) {
-				setError('Please login again.');
-				setLoading(false);
-				return;
-			}
-
 			try {
 				const response = await axios.get('http://127.0.0.1:8000/api/user', {
 					headers: {
