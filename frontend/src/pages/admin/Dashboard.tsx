@@ -39,7 +39,9 @@ const emptyStats: AdminStats = {
   messages: 0,
 };
 
-
+function formatNumber(value: number) {
+  return value.toLocaleString();
+}
 
 export default function DashboardAdmin() {
   const [stats, setStats] = useState<AdminStats>(emptyStats);
@@ -146,7 +148,7 @@ export default function DashboardAdmin() {
                 />
               </div>
               <h4 className="text-2xl font-bold text-white">
-                {new Date(stats.users).toLocaleString()}
+                {formatNumber(stats.users)}
               </h4>
             </div>
 
@@ -160,7 +162,7 @@ export default function DashboardAdmin() {
                 />
               </div>
               <h4 className="text-2xl font-bold text-white">
-                {new Date(stats.events).toLocaleString()}
+                {formatNumber(stats.events)}
               </h4>
             </div>
 
@@ -174,7 +176,7 @@ export default function DashboardAdmin() {
                 />
               </div>
               <h4 className="text-2xl font-bold text-white">
-                {new Date(providersTotal).toLocaleString()}
+                {formatNumber(providersTotal)}
               </h4>
             </div>
 
@@ -188,7 +190,7 @@ export default function DashboardAdmin() {
                 />
               </div>
               <h4 className="text-2xl font-bold text-white">
-                {new Date(stats.bookings).toLocaleString()}
+                {formatNumber(stats.bookings)}
               </h4>
             </div>
           </div>
@@ -205,7 +207,7 @@ export default function DashboardAdmin() {
                 <div>
                   <p className="mb-4 text-xs text-gray-400">Organizers</p>
                   <h4 className="text-2xl font-bold text-white">
-                    {new Date(organizersTotal).toLocaleString()}
+                    {formatNumber(organizersTotal)}
                   </h4>
                 </div>
                 <img src={OrganizateurIcon} alt="" />
@@ -215,13 +217,13 @@ export default function DashboardAdmin() {
                 <div className="flex justify-between text-gray-300">
                   <span>Active</span>
                   <span className="text-green-400">
-                    {new Date(organizersTotal - organizersBanned).toLocaleString()}
+                    {formatNumber(organizersTotal - organizersBanned)}
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-300">
                   <span>Banned</span>
                   <span className="text-red-400">
-                    {new Date(organizersBanned).toLocaleString()}
+                    {formatNumber(organizersBanned)}
                   </span>
                 </div>
               </div>
@@ -232,7 +234,7 @@ export default function DashboardAdmin() {
                 <div>
                   <p className="mb-4 text-xs text-gray-400">Providers</p>
                   <h4 className="text-2xl font-bold text-white">
-                    {new Date(providersTotal).toLocaleString()}
+                    {formatNumber(providersTotal)}
                   </h4>
                 </div>
 
@@ -243,13 +245,13 @@ export default function DashboardAdmin() {
                 <div className="flex justify-between text-gray-300">
                   <span>Active</span>
                   <span className="text-green-400">
-                    {new Date(providersTotal - providersBanned).toLocaleString()}
+                    {formatNumber(providersTotal - providersBanned)}
                   </span>
                 </div>
                 <div className="flex justify-between text-gray-300">
                   <span>Banned</span>
                   <span className="text-red-400">
-                    {new Date(providersBanned).toLocaleString()}
+                    {formatNumber(providersBanned)}
                   </span>
                 </div>
               </div>
@@ -267,28 +269,28 @@ export default function DashboardAdmin() {
               <div className="rounded-md border border-white/5 bg-[#0F172A] p-4">
                 <p className="text-xs text-gray-400">Total Events</p>
                 <h4 className="mt-2 text-xl font-bold text-white">
-                  {new Date(stats.events).toLocaleString()}
+                  {formatNumber(stats.events)}
                 </h4>
               </div>
 
               <div className="rounded-md border border-white/5 bg-[#0F172A] p-4">
                 <p className="text-xs text-gray-400">Services</p>
                 <h4 className="mt-2 text-xl font-bold text-green-400">
-                  {new Date(stats.services).toLocaleString()}
+                  {formatNumber(stats.services)}
                 </h4>
               </div>
 
               <div className="rounded-md border border-white/5 bg-[#0F172A] p-4">
                 <p className="text-xs text-gray-400">Reviews</p>
                 <h4 className="mt-2 text-xl font-bold text-orange-400">
-                  {new Date(stats.reviews).toLocaleString()}
+                  {formatNumber(stats.reviews)}
                 </h4>
               </div>
 
               <div className="rounded-md border border-white/5 bg-[#0F172A] p-4">
                 <p className="text-xs text-gray-400">Messages</p>
                 <h4 className="mt-2 text-xl font-bold text-red-400">
-                  {new Date(stats.messages).toLocaleString()}
+                  {formatNumber(stats.messages)}
                 </h4>
               </div>
             </div>
@@ -313,7 +315,7 @@ export default function DashboardAdmin() {
               <img src={ModerationIcon} alt="" className="mb-4 w-12" />
               <h4 className="font-semibold">Moderation Queue</h4>
               <p className="mt-1 text-sm text-orange-100">
-                Total reviews ({new Date(stats.reviews).toLocaleString()})
+                Total reviews ({formatNumber(stats.reviews)})
               </p>
             </div>
 
