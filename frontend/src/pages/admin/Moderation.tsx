@@ -70,25 +70,9 @@ const defaultStats: StatItem[] = [
   },
 ] as const;
 
-function formatDate(value?: string | null) {
-  if (!value) {
-    return "-";
-  }
 
-  return new Date(value).toLocaleDateString();
-}
 
-function mapStatus(value?: string | null) {
-  if (value === "planning") {
-    return "Pending";
-  }
 
-  if (value === "cancelled") {
-    return "Rejected";
-  }
-
-  return "Approved";
-}
 
 export default function Moderation() {
   const [stats, setStats] = useState<StatItem[]>(defaultStats as StatItem[]);
@@ -175,11 +159,11 @@ export default function Moderation() {
             organizer: event.organizer?.name || "Unknown organizer",
             email: event.organizer?.email || "-",
             location: event.location || "-",
-            date: formatDate(event.event_date),
-            submittedAgo: formatDate(event.created_at),
+            date: new Date(event.event_date??'').toLocaleDateString(),
+            submittedAgo: new Date(event.created_at??'').toLocaleDateString(),
             guests: event.guests_count || 0,
             budget: "0",
-            status: mapStatus(event.status),
+            status: event.status || "Unknown",
           })),
         );
       } catch (err: any) {
@@ -221,7 +205,9 @@ export default function Moderation() {
       setStats((currentStats) =>
         currentStats.map((stat) => {
           if (stat.label === "Pending Events") {
-            return { ...stat, value: Math.max(0, stat.value - 1) };
+            return {
+              ...stat,  value: stat.value - 1,
+            };
           }
 
           return stat;
