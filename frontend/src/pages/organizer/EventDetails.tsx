@@ -95,9 +95,7 @@ export default function EventDetails() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [budget, setBudget] = useState<BudgetItem | null>(null);
   const [bookings, setBookings] = useState<BookingItem[]>([]);
-  const [savedMessageProviderIds, setSavedMessageProviderIds] = useState<
-    number[]
-  >([]);
+
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -110,28 +108,7 @@ export default function EventDetails() {
   const [budgetForm, setBudgetForm] = useState<BudgetForm>(emptyBudgetForm);
   const [taskForm, setTaskForm] = useState<TaskForm>(emptyTaskForm);
 
-  const messageLaterStorageKey = `event:${eventId || "unknown"}:messageLaterProviders`;
 
-  const readSavedMessageProviderIds = () => {
-    const savedText = localStorage.getItem(messageLaterStorageKey);
-
-    if (!savedText) {
-      return [] as number[];
-    }
-
-    try {
-      const parsed = JSON.parse(savedText);
-      if (!Array.isArray(parsed)) {
-        return [] as number[];
-      }
-
-      return parsed
-        .map((item) => Number(item))
-        .filter((item) => Number.isInteger(item) && item > 0);
-    } catch {
-      return [] as number[];
-    }
-  };
 
   const formatBookingStatus = (status?: string | null) => {
     if (status === "confirmed") {
@@ -226,7 +203,7 @@ export default function EventDetails() {
         title: apiEvent?.title || "",
         description: apiEvent?.description || "",
         event_date: apiEvent?.event_date
-          ? apiEvent.event_date.slice(0, 10)
+          ? apiEvent.event_date
           : "",
         location: apiEvent?.location || "",
         guests_count: apiEvent?.guests_count
@@ -240,7 +217,6 @@ export default function EventDetails() {
         spent_amount: apiBudget ? String(apiBudget.spent_amount) : "",
       });
 
-      setSavedMessageProviderIds(readSavedMessageProviderIds());
     } catch (err: any) {
       setError(err?.response?.data?.message || "Failed to load event.");
     } finally {
@@ -789,7 +765,6 @@ export default function EventDetails() {
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {bookings.map((booking) => {
               const bookingStatus = formatBookingStatus(booking.status);
-              const providerId = booking.provider?.id;
               const canViewDetails = Number.isInteger(booking.service?.id);
 
               return (
@@ -823,9 +798,7 @@ export default function EventDetails() {
                       }
                       className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700"
                     >
-                      {providerId && savedMessageProviderIds.includes(providerId)
-                        ? "Saved"
-                        : "Message later"}
+                 {"Message"}
                     </button>
 
                     {canViewDetails ? (
