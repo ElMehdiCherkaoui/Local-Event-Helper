@@ -27,26 +27,7 @@ type Service = {
   details: string;
 };
 
-function formatPrice(item: ApiServiceItem) {
-  const min = item.price_min ?? "";
-  const max = item.price_max ?? "";
 
-  if (min && max) {
-    return `$${min}${item.price_unit ? `/${item.price_unit}` : ""} - $${max}${
-      item.price_unit ? `/${item.price_unit}` : ""
-    }`;
-  }
-
-  if (min) {
-    return `$${min}${item.price_unit ? `/${item.price_unit}` : ""}`;
-  }
-
-  if (max) {
-    return `$${max}${item.price_unit ? `/${item.price_unit}` : ""}`;
-  }
-
-  return "Price on request";
-}
 
 export default function ProvidersDetails() {
   const { providerId } = useParams();
@@ -107,7 +88,7 @@ export default function ProvidersDetails() {
 
         const mappedServices = providerServices.map((item, index) => ({
           name: item.title || `Service ${index + 1}`,
-          price: formatPrice(item),
+          price: item.price_min ?? "Price on request" + (item.price_unit ? ` / ${item.price_unit}` : ""),
           details: item.description || "No details yet",
         }));
 
